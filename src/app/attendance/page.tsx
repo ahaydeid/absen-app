@@ -26,21 +26,6 @@ export default function AttendancePage() {
     { id: 13, name: "Yuliana Dewi", status: "" },
     { id: 14, name: "Andika Saputra", status: "" },
     { id: 15, name: "Nisa Amelia", status: "" },
-    { id: 16, name: "Kevin Nugraha", status: "" },
-    { id: 17, name: "Putri Andayani", status: "" },
-    { id: 18, name: "Farhan Prasetyo", status: "" },
-    { id: 19, name: "Salsa Khairunnisa", status: "" },
-    { id: 20, name: "Ilham Setiawan", status: "" },
-    { id: 21, name: "Citra Anggraini", status: "" },
-    { id: 22, name: "Yoga Permana", status: "" },
-    { id: 23, name: "Dewi Sartika", status: "" },
-    { id: 24, name: "Bima Arya", status: "" },
-    { id: 25, name: "Rani Safitri", status: "" },
-    { id: 26, name: "Teguh Santoso", status: "" },
-    { id: 27, name: "Ayu Lestari", status: "" },
-    { id: 28, name: "Hafidz Ramadhan", status: "" },
-    { id: 29, name: "Zahra Oktaviani", status: "" },
-    { id: 30, name: "Bayu Kurniawan", status: "" },
   ]);
 
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -55,7 +40,6 @@ export default function AttendancePage() {
     }
   };
 
-  // Update currentIndex saat scroll manual berdasarkan elemen yang paling dekat dengan tengah kontainer
   useEffect(() => {
     const handleScroll = () => {
       if (!listRef.current) return;
@@ -121,7 +105,7 @@ export default function AttendancePage() {
           </div>
 
           <div className="relative h-100 overflow-hidden">
-            <ul ref={listRef} className="overflow-y-auto scroll-smooth h-full pb-29 pt-31">
+            <ul ref={listRef} className="overflow-y-auto scroll-smooth h-full pb-45 pt-45">
               {students.map((s, index) => (
                 <li
                   key={s.id}
