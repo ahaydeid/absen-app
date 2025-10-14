@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowUpRight, Check } from "lucide-react";
+import Link from "next/link";
 
 export default function TodaySection() {
   const items = [
@@ -65,7 +66,8 @@ export default function TodaySection() {
                   <div className="text-base font-extrabold text-gray-900">{item.title}</div>
                   <div className="italic text-gray-600 text-sm">{item.subject}</div>
                 </div>
-                <ArrowUpRight className="w-5 h-5 text-gray-400" />
+                <Link href="/today"><ArrowUpRight className="w-5 h-5 text-gray-400" /></Link>
+                
               </div>
 
               <div className="flex flex-wrap items-center gap-2 mt-2">
