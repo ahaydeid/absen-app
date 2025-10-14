@@ -1,6 +1,5 @@
 "use client";
 
-import BottomNav from "@/components/BottomNav";
 import HeroSection from "@/app/components/HeroSection";
 import MenuSection from "@/app/components/MenuSection";
 import TodaySection from "./components/TodaySection";
@@ -12,15 +11,6 @@ export default function DashboardPage() {
       <MenuSection/>
       <TodaySection/>
 
-
-
-
-      <BottomNav
-        active="home"
-        onNavigate={(item) => {
-          console.log("navigate to", item);
-        }}
-      />
     </div>
   );
 }
