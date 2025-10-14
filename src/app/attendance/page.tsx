@@ -98,13 +98,22 @@ export default function AttendancePage() {
       <div className="w-full h-10 bg-gray-200" />
 
       <main className="max-w-md w-full mx-auto p-4">
-        <p className="text-sm font-bold mb-2">Senin, 12 September 2025</p>
+        <p className="text-sm font-bold text-gray-800 mb-3">
+          {new Date().toLocaleDateString("id-ID", {
+            weekday: "long",
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          })}
+        </p>
 
         <div className="bg-white rounded-xl p-3 shadow-sm relative overflow-hidden">
           <div className="flex justify-between items-center text-sm font-semibold mb-2">
             <span>
               {students.filter((s) => s.status !== "").length}/{students.length}
             </span>
+            <p className="text-lg font-bold mb-2">MPLB-2</p>
+
             <span className="text-gray-400">
               <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                 <path strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" d="M12 19V5m0 0l-7 7m7-7l7 7" />
