@@ -95,7 +95,6 @@ export default function AttendancePage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col pb-20">
-      <div className="w-full h-10 bg-gray-200" />
 
       <main className="max-w-md w-full mx-auto p-4">
         <p className="text-sm font-bold text-gray-800 mb-3">
@@ -121,7 +120,7 @@ export default function AttendancePage() {
             </span>
           </div>
 
-          <div className="relative h-72 overflow-hidden">
+          <div className="relative h-100 overflow-hidden">
             <ul ref={listRef} className="overflow-y-auto scroll-smooth h-full pb-29 pt-31">
               {students.map((s, index) => (
                 <li
