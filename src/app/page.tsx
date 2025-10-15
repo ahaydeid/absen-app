@@ -10,7 +10,6 @@ export default function DashboardPage() {
       <HeroSection/>
       <MenuSection/>
       <TodaySection/>
-
     </div>
   );
 }

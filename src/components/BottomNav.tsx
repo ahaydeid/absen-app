@@ -24,7 +24,7 @@ export default function BottomNav({ active = "home" }: { active?: Item }) {
               key={it.id}
               href={it.href}
               className={`flex-1 flex flex-col items-center justify-center text-xs py-2 focus:outline-none transition ${
-                isActive ? "text-sky-600" : "text-gray-500"
+                isActive ? "text-gray-900" : "text-gray-900"
               }`}
             >
               <div>{it.icon}</div>
