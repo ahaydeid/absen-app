@@ -7,9 +7,9 @@ import TodaySection from "./components/TodaySection";
 export default function DashboardPage() {
   return (
     <div className="min-h-screen px-5 pb-15 pt-5 bg-[#F9F9F9]">
-      <HeroSection/>
-      <MenuSection/>
-      <TodaySection/>
+      <HeroSection />
+      <MenuSection />
+      <TodaySection />
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useRef, useState, useEffect } from "react";
 import { Check } from "lucide-react";
+import DateDisplay from "@/components/DateDisplay";
 
 interface Student {
   id: number;
@@ -79,15 +80,9 @@ export default function AttendancePage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col pb-20">
-
       <main className="max-w-md w-full mx-auto p-4">
-        <p className="text-sm font-bold text-gray-800 mb-3">
-          {new Date().toLocaleDateString("id-ID", {
-            weekday: "long",
-            day: "numeric",
-            month: "long",
-            year: "numeric",
-          })}
+        <p className="text-xs sm:text-sm md:text-lg font-bold text-gray-800 mb-2 md:mb-3 text-center flex-1">
+          <DateDisplay />
         </p>
 
         <div className="bg-white rounded-xl p-3 shadow-sm relative overflow-hidden">
@@ -95,7 +90,7 @@ export default function AttendancePage() {
             <span>
               {students.filter((s) => s.status !== "").length}/{students.length}
             </span>
-            <p className="text-lg font-bold mb-2">MPLB-2</p>
+            <p className="text-lg font-bold mb-2">MPLB-1</p>
 
             <span className="text-gray-400">
               <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -132,16 +127,19 @@ export default function AttendancePage() {
         </div>
 
         <div className="flex justify-around mt-4">
-          <button onClick={() => updateStatus("H")} className="bg-green-600 w-14 h-14 rounded-md flex items-center justify-center">
+          <button onClick={() => updateStatus("H")} className="bg-green-600 w-14 h-14 rounded-md flex items-center justify-center active:bg-green-700 transition-colors duration-150">
             <Check className="text-white w-6 h-6" />
           </button>
-          <button onClick={() => updateStatus("S")} className="bg-yellow-400 w-14 h-14 rounded-md flex items-center justify-center font-bold text-lg">
+
+          <button onClick={() => updateStatus("S")} className="bg-yellow-400 w-14 h-14 rounded-md flex items-center justify-center font-bold text-lg active:bg-yellow-500 transition-colors duration-150">
             S
           </button>
-          <button onClick={() => updateStatus("I")} className="bg-sky-400 w-14 h-14 rounded-md flex items-center justify-center font-bold text-lg text-white">
+
+          <button onClick={() => updateStatus("I")} className="bg-sky-400 w-14 h-14 rounded-md flex items-center justify-center font-bold text-lg text-white active:bg-sky-500 transition-colors duration-150">
             I
           </button>
-          <button onClick={() => updateStatus("A")} className="bg-red-500 w-14 h-14 rounded-md flex items-center justify-center font-bold text-lg text-white">
+
+          <button onClick={() => updateStatus("A")} className="bg-red-500 w-14 h-14 rounded-md flex items-center justify-center font-bold text-lg text-white active:bg-red-600 transition-colors duration-150">
             A
           </button>
         </div>

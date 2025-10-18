@@ -70,7 +70,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => setShowPassword((s) => !s)}
-                className="absolute right-3 top-13 transform -translate-y-1/2 p-2 rounded-md"
+                className="absolute cursor-pointer right-3 top-13 transform -translate-y-1/2 p-2 rounded-md"
                 aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
               >
                 {showPassword ? (
@@ -91,7 +91,7 @@ export default function LoginPage() {
             <div>
               <button
                 type="submit"
-                className="w-full bg-sky-400 hover:bg-sky-500 text-white font-semibold rounded-full py-3 shadow-sm transition"
+                className="w-full bg-purple-600 hover:bg-purple-600 text-white font-semibold cursor-pointer rounded-full py-3 shadow-sm transition"
               >
                 Login
               </button>

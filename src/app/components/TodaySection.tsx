@@ -11,8 +11,8 @@ export default function TodaySection() {
       time: "08:15",
       title: "MPLB 1",
       subject: "Algoritma Pemrograman",
-      range: "08:15 - 09:45",
-      jp: "2 JP",
+      range: "08:15 - 09:00",
+      jp: "1 JP",
       status: null,
     },
     {
