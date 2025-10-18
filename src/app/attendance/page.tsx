@@ -112,28 +112,28 @@ export default function AttendancePage() {
               {students.filter((s) => s.status !== "").length}/{students.length}
             </span>
             <p className="text-lg font-bold mb-2">MPLB-1</p>
-
-            <span className="text-gray-400">
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" d="M12 19V5m0 0l-7 7m7-7l7 7" />
-              </svg>
-            </span>
+            <span className="text-gray-400"> ... </span>
           </div>
 
           <div className="relative h-100 overflow-hidden">
-            <ul ref={listRef} className="overflow-y-auto scroll-smooth h-96 pb-43 pt-43">
+            {/* pastikan UL punya z-index lebih tinggi dari overlay */}
+            <ul ref={listRef} className="relative z-10 overflow-y-auto scroll-smooth h-96 pb-43 pt-43">
               {loading ? (
-                <li className="text-center py-2 text-gray-500">Memuat daftar siswa...</li>
+                <li className="text-center py-2 text-white">Memuat daftar siswa...</li>
               ) : fetchError ? (
                 <li className="text-center py-2 text-red-500">Error: {fetchError}</li>
               ) : students.length === 0 ? (
-                <li className="text-center py-2 text-gray-500 italic">Tidak ada siswa</li>
+                <li className="text-center py-2 text-white italic">Tidak ada siswa</li>
               ) : (
                 students.map((s, index) => (
                   <li
                     key={s.id}
                     className={`flex justify-center items-center gap-2 px-3 py-2 mb-2 rounded-full transition-all duration-300 text-center ${
-                      index === currentIndex ? "font-bold text-gray-900" : s.status ? "text-gray-400" : "text-gray-300"
+                      index === currentIndex
+                        ? "font-bold text-white text-xl"
+                        : s.status
+                        ? "text-gray-400"
+                        : "text-gray-300"
                     }`}
                   >
                     <span>{s.name}</span>
@@ -151,11 +151,12 @@ export default function AttendancePage() {
               )}
             </ul>
 
-            <div
-              className="absolute inset-x-0 -translate-y-1/2 pointer-events-none flex justify-center"
-              style={{ top: "calc(50% - 10px)" }}
-            >
-              <div className="w-[90%] h-10 border border-gray-400 rounded-full"></div>
+            {/* overlay pill: letakkan di bawah (z-0) agar list items bisa di atasnya */}
+            <div className="absolute inset-x-0 -translate-y-1/2 pointer-events-none flex justify-center z-0" style={{ top: "calc(50% - 10px)" }}>
+              <div
+                className="w-[100%] h-15 rounded"
+                style={{ backgroundColor: "#000000" }}
+              />
             </div>
           </div>
         </div>

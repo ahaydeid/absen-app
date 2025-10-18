@@ -16,7 +16,8 @@ import {
   ChevronUp,
   School,
   BookOpen,
-  ClipboardCheck, // 🔹 Icon tambahan untuk Absen
+  ClipboardCheck,
+  Loader2,
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -27,11 +28,11 @@ export default function Sidebar() {
 
   const menus = [
     { name: "Dashboard", icon: LayoutDashboard, path: "/admin/dashboard" },
+    { name: "Hari Ini", icon: Loader2, path: "/admin/today" },
     { name: "Master Siswa", icon: Users, path: "/admin/master-siswa" },
     { name: "Master Guru", icon: GraduationCap, path: "/admin/master-guru" },
     { name: "Master Jadwal", icon: CalendarClock, path: "/admin/master-jadwal" },
     { name: "Laporan", icon: FileText, path: "/admin/laporan" },
-    // 🔹 Menu Absen baru (diletakkan setelah Laporan)
     { name: "Absen", icon: ClipboardCheck, path: "/admin/absen" },
     { name: "Kelas", icon: School, path: "/admin/kelas" },
     { name: "Mata Pelajaran", icon: BookOpen, path: "/admin/mata-pelajaran" },
@@ -49,18 +50,11 @@ export default function Sidebar() {
   ];
 
   return (
-    <aside
-      className={`${
-        isOpen ? "w-56" : "w-16"
-      } bg-white border-r border-gray-200 pb-10 transition-all duration-300 flex sticky flex-col top-0 left-0 h-screen`}
-    >
+    <aside className={`${isOpen ? "w-56" : "w-16"} bg-white border-r border-gray-200 pb-10 transition-all duration-300 flex sticky flex-col top-0 left-0 h-screen`}>
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-100 sticky top-0 bg-white z-10">
         {isOpen && <h1 className="font-bold text-lg text-gray-800">Admin</h1>}
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          className="p-2 rounded-md hover:bg-gray-100"
-        >
+        <button onClick={() => setIsOpen(!isOpen)} className="p-2 rounded-md hover:bg-gray-100">
           {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
       </div>
@@ -77,23 +71,15 @@ export default function Sidebar() {
               <div key={index}>
                 <button
                   onClick={() => setOpenAbsen(!openAbsen)}
-                  className={`flex items-center gap-3 w-full p-3 cursor-pointer transition text-sm ${
-                    isOpen ? "justify-start px-4" : "justify-center"
-                  } ${
-                    pathname.startsWith("/admin/absen")
-                      ? "bg-sky-600 text-white font-semibold"
-                      : "text-gray-700 hover:bg-sky-50"
+                  className={`flex items-center gap-3 w-full p-3 cursor-pointer transition text-sm ${isOpen ? "justify-start px-4" : "justify-center"} ${
+                    pathname.startsWith("/admin/absen") ? "bg-sky-600 text-white font-semibold" : "text-gray-700 hover:bg-sky-50"
                   }`}
                 >
                   <Icon className="w-5 h-5 flex-shrink-0" />
                   {isOpen && (
                     <div className="flex justify-between items-center w-full">
                       <span>Absen</span>
-                      {openAbsen ? (
-                        <ChevronUp className="w-4 h-4" />
-                      ) : (
-                        <ChevronDown className="w-4 h-4" />
-                      )}
+                      {openAbsen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                     </div>
                   )}
                 </button>
@@ -103,15 +89,7 @@ export default function Sidebar() {
                   <div className="ml-10 mt-1">
                     {absenSubmenus.map((sub, i) => (
                       <Link key={i} href={sub.path}>
-                        <div
-                          className={`block px-2 py-2 text-sm rounded-md transition ${
-                            pathname === sub.path
-                              ? "text-white font-semibold bg-sky-600"
-                              : "text-gray-700 hover:bg-gray-50"
-                          }`}
-                        >
-                          {sub.name}
-                        </div>
+                        <div className={`block px-2 py-2 text-sm rounded-md transition ${pathname === sub.path ? "text-white font-semibold bg-sky-600" : "text-gray-700 hover:bg-gray-50"}`}>{sub.name}</div>
                       </Link>
                     ))}
                   </div>
@@ -123,15 +101,7 @@ export default function Sidebar() {
           // 🔹 Menu lainnya tetap seperti semula
           return (
             <Link key={index} href={menu.path}>
-              <div
-                className={`flex items-center gap-3 w-full p-3 cursor-pointer transition text-sm ${
-                  isOpen ? "justify-start px-4" : "justify-center"
-                } ${
-                  isActive
-                    ? "bg-sky-600 text-white font-semibold"
-                    : "text-gray-700 hover:bg-sky-50"
-                }`}
-              >
+              <div className={`flex items-center gap-3 w-full p-3 cursor-pointer transition text-sm ${isOpen ? "justify-start px-4" : "justify-center"} ${isActive ? "bg-sky-600 text-white font-semibold" : "text-gray-700 hover:bg-sky-50"}`}>
                 <Icon className="w-5 h-5 flex-shrink-0" />
                 {isOpen && <span>{menu.name}</span>}
               </div>
@@ -143,23 +113,15 @@ export default function Sidebar() {
         <div className="mt-1">
           <button
             onClick={() => setOpenConfig(!openConfig)}
-            className={`flex items-center gap-3 w-full p-3 cursor-pointer transition text-sm ${
-              isOpen ? "justify-start px-4" : "justify-center"
-            } ${
-              pathname.startsWith("/admin/config-jadwal")
-                ? "bg-sky-600 text-white font-semibold"
-                : "text-gray-700 hover:bg-sky-50"
+            className={`flex items-center gap-3 w-full p-3 cursor-pointer transition text-sm ${isOpen ? "justify-start px-4" : "justify-center"} ${
+              pathname.startsWith("/admin/config-jadwal") ? "bg-sky-600 text-white font-semibold" : "text-gray-700 hover:bg-sky-50"
             }`}
           >
             <CalendarCog className="w-5 h-5 flex-shrink-0" />
             {isOpen && (
               <div className="flex justify-between items-center w-full">
                 <span>Konfigurasi Jadwal</span>
-                {openConfig ? (
-                  <ChevronUp className="w-4 h-4" />
-                ) : (
-                  <ChevronDown className="w-4 h-4" />
-                )}
+                {openConfig ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
               </div>
             )}
           </button>
@@ -168,15 +130,7 @@ export default function Sidebar() {
             <div className="ml-10 mt-1">
               {configSubmenus.map((sub, i) => (
                 <Link key={i} href={sub.path}>
-                  <div
-                    className={`block px-2 py-2 text-sm rounded-md transition ${
-                      pathname === sub.path
-                        ? "text-white font-semibold bg-sky-600"
-                        : "text-gray-700 hover:bg-gray-50"
-                    }`}
-                  >
-                    {sub.name}
-                  </div>
+                  <div className={`block px-2 py-2 text-sm rounded-md transition ${pathname === sub.path ? "text-white font-semibold bg-sky-600" : "text-gray-700 hover:bg-gray-50"}`}>{sub.name}</div>
                 </Link>
               ))}
             </div>
