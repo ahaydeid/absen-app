@@ -34,10 +34,7 @@ export default function AttendancePage() {
       setLoading(true);
       setFetchError(null);
 
-      const { data, error } = await supabase
-        .from<"siswa", { id: number; nama: string }>("siswa")
-        .select("id, nama")
-        .order("nama", { ascending: true });
+      const { data, error } = await supabase.from<"siswa", { id: number; nama: string }>("siswa").select("id, nama").order("nama", { ascending: true });
 
       if (error) {
         console.error("Failed to fetch siswa:", error);
@@ -124,16 +121,13 @@ export default function AttendancePage() {
           </div>
 
           <div className="relative h-100 overflow-hidden">
-            <ul
-              ref={listRef}
-              className="overflow-y-auto scroll-smooth h-96 pb-40 pt-45"
-            >
+            <ul ref={listRef} className="overflow-y-auto scroll-smooth h-96 pb-43 pt-43">
               {loading ? (
-                <li className="text-center py-6 text-gray-500">Memuat daftar siswa...</li>
+                <li className="text-center py-2 text-gray-500">Memuat daftar siswa...</li>
               ) : fetchError ? (
-                <li className="text-center py-6 text-red-500">Error: {fetchError}</li>
+                <li className="text-center py-2 text-red-500">Error: {fetchError}</li>
               ) : students.length === 0 ? (
-                <li className="text-center py-6 text-gray-500 italic">Tidak ada siswa</li>
+                <li className="text-center py-2 text-gray-500 italic">Tidak ada siswa</li>
               ) : (
                 students.map((s, index) => (
                   <li
@@ -157,7 +151,10 @@ export default function AttendancePage() {
               )}
             </ul>
 
-            <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 pointer-events-none flex justify-center">
+            <div
+              className="absolute inset-x-0 -translate-y-1/2 pointer-events-none flex justify-center"
+              style={{ top: "calc(50% - 10px)" }}
+            >
               <div className="w-[90%] h-10 border border-gray-400 rounded-full"></div>
             </div>
           </div>
@@ -181,12 +178,7 @@ export default function AttendancePage() {
           </button>
         </div>
 
-        <button
-          disabled={!allDone}
-          className={`w-full py-3 mt-4 rounded-full text-lg font-semibold flex items-center justify-center gap-2 transition ${
-            allDone ? "bg-green-600 text-white" : "bg-gray-300 text-gray-600 cursor-not-allowed"
-          }`}
-        >
+        <button disabled={!allDone} className={`w-full py-3 mt-4 rounded-full text-lg font-semibold flex items-center justify-center gap-2 transition ${allDone ? "bg-green-600 text-white" : "bg-gray-300 text-gray-600 cursor-not-allowed"}`}>
           <Check className="w-5 h-5" />
           Selesai
         </button>
