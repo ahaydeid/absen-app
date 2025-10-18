@@ -3,6 +3,7 @@
 import { useRef, useState, useEffect } from "react";
 import { Check } from "lucide-react";
 import DateDisplay from "@/components/DateDisplay";
+import { supabase } from "@/lib/supabaseClient";
 
 interface Student {
   id: number;
@@ -11,26 +12,12 @@ interface Student {
 }
 
 export default function AttendancePage() {
-  const [students, setStudents] = useState<Student[]>([
-    { id: 1, name: "Raka Pratama", status: "" },
-    { id: 2, name: "Aldi Pratama", status: "" },
-    { id: 3, name: "Siti Nurhaliza", status: "" },
-    { id: 4, name: "Intan Permata Sari", status: "" },
-    { id: 5, name: "Rizky Maulana Akbar", status: "" },
-    { id: 6, name: "Dian Anggraini", status: "" },
-    { id: 7, name: "Bagas Aditya Putra", status: "" },
-    { id: 8, name: "Nadya Kusuma Putri", status: "" },
-    { id: 9, name: "Fajar Ramadhan", status: "" },
-    { id: 10, name: "Maya Salsabila Anjani", status: "" },
-    { id: 11, name: "Reza Alfian", status: "" },
-    { id: 12, name: "Aulia Rahman", status: "" },
-    { id: 13, name: "Yuliana Dewi", status: "" },
-    { id: 14, name: "Andika Saputra", status: "" },
-    { id: 15, name: "Nisa Amelia", status: "" },
-  ]);
-
+  const [students, setStudents] = useState<Student[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isStarted, setIsStarted] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
   const listRef = useRef<HTMLUListElement | null>(null);
 
   const scrollToStudent = (index: number) => {
@@ -41,6 +28,38 @@ export default function AttendancePage() {
     }
   };
 
+  // fetch siswa from supabase
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      setFetchError(null);
+
+      const { data, error } = await supabase
+        .from<"siswa", { id: number; nama: string }>("siswa")
+        .select("id, nama")
+        .order("nama", { ascending: true });
+
+      if (error) {
+        console.error("Failed to fetch siswa:", error);
+        setFetchError(error.message);
+        setStudents([]);
+      } else {
+        // map to our Student type, default status ""
+        const mapped = (data || []).map((s) => ({
+          id: s.id,
+          name: s.nama,
+          status: "" as Student["status"],
+        }));
+        setStudents(mapped);
+      }
+
+      setLoading(false);
+    };
+
+    load();
+  }, []);
+
+  // detect visible / center item
   useEffect(() => {
     const handleScroll = () => {
       if (!listRef.current) return;
@@ -50,20 +69,25 @@ export default function AttendancePage() {
       let smallestDistance = Infinity;
 
       Array.from(container.children).forEach((child, index) => {
-        const rect = (child as HTMLElement).offsetTop + (child as HTMLElement).offsetHeight / 2;
-        const distance = Math.abs(rect - containerCenter);
+        const childEl = child as HTMLElement;
+        const rectCenter = childEl.offsetTop + childEl.offsetHeight / 2;
+        const distance = Math.abs(rectCenter - containerCenter);
         if (distance < smallestDistance) {
           smallestDistance = distance;
           closestIndex = index;
         }
       });
+
       setCurrentIndex(closestIndex);
     };
 
     const container = listRef.current;
     if (container) container.addEventListener("scroll", handleScroll);
+    // also call once to set initial index
+    handleScroll();
+
     return () => container?.removeEventListener("scroll", handleScroll);
-  }, []);
+  }, [students]);
 
   const updateStatus = (status: Student["status"]) => {
     if (!isStarted) setIsStarted(true);
@@ -71,12 +95,12 @@ export default function AttendancePage() {
     setStudents((prev) => {
       const updated = prev.map((s, i) => (i === currentIndex ? { ...s, status } : s));
       const nextIndex = currentIndex + 1 < updated.length ? currentIndex + 1 : currentIndex;
-      setTimeout(() => scrollToStudent(nextIndex), 300);
+      setTimeout(() => scrollToStudent(nextIndex), 200);
       return updated;
     });
   };
 
-  const allDone = students.every((s) => s.status !== "");
+  const allDone = students.length > 0 && students.every((s) => s.status !== "");
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col pb-20">
@@ -100,24 +124,37 @@ export default function AttendancePage() {
           </div>
 
           <div className="relative h-100 overflow-hidden">
-            <ul ref={listRef} className="overflow-y-auto scroll-smooth h-full pb-45 pt-45">
-              {students.map((s, index) => (
-                <li
-                  key={s.id}
-                  className={`flex justify-center items-center gap-2 px-3 py-2 mb-2 rounded-full transition-all duration-300 text-center ${index === currentIndex ? "font-bold text-gray-900" : s.status ? "text-gray-400" : "text-gray-300"}`}
-                >
-                  <span>{s.name}</span>
-                  {s.status && (
-                    <div
-                      className={`w-5 h-5 flex items-center justify-center rounded-sm text-[10px] font-bold text-white ${
-                        s.status === "H" ? "bg-green-600" : s.status === "S" ? "bg-yellow-400 text-gray-900" : s.status === "I" ? "bg-sky-400" : "bg-red-500"
-                      }`}
-                    >
-                      {s.status}
-                    </div>
-                  )}
-                </li>
-              ))}
+            <ul
+              ref={listRef}
+              className="overflow-y-auto scroll-smooth h-96 pb-40 pt-45"
+            >
+              {loading ? (
+                <li className="text-center py-6 text-gray-500">Memuat daftar siswa...</li>
+              ) : fetchError ? (
+                <li className="text-center py-6 text-red-500">Error: {fetchError}</li>
+              ) : students.length === 0 ? (
+                <li className="text-center py-6 text-gray-500 italic">Tidak ada siswa</li>
+              ) : (
+                students.map((s, index) => (
+                  <li
+                    key={s.id}
+                    className={`flex justify-center items-center gap-2 px-3 py-2 mb-2 rounded-full transition-all duration-300 text-center ${
+                      index === currentIndex ? "font-bold text-gray-900" : s.status ? "text-gray-400" : "text-gray-300"
+                    }`}
+                  >
+                    <span>{s.name}</span>
+                    {s.status && (
+                      <div
+                        className={`w-5 h-5 flex items-center justify-center rounded-sm text-[10px] font-bold text-white ${
+                          s.status === "H" ? "bg-green-600" : s.status === "S" ? "bg-yellow-400 text-gray-900" : s.status === "I" ? "bg-sky-400" : "bg-red-500"
+                        }`}
+                      >
+                        {s.status}
+                      </div>
+                    )}
+                  </li>
+                ))
+              )}
             </ul>
 
             <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 pointer-events-none flex justify-center">
@@ -144,7 +181,12 @@ export default function AttendancePage() {
           </button>
         </div>
 
-        <button disabled={!allDone} className={`w-full py-3 mt-4 rounded-full text-lg font-semibold flex items-center justify-center gap-2 transition ${allDone ? "bg-green-600 text-white" : "bg-gray-300 text-gray-600 cursor-not-allowed"}`}>
+        <button
+          disabled={!allDone}
+          className={`w-full py-3 mt-4 rounded-full text-lg font-semibold flex items-center justify-center gap-2 transition ${
+            allDone ? "bg-green-600 text-white" : "bg-gray-300 text-gray-600 cursor-not-allowed"
+          }`}
+        >
           <Check className="w-5 h-5" />
           Selesai
         </button>
