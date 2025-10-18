@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { ArrowUpDown } from "lucide-react";
+import { Eye, Pencil, Trash2, Plus, Upload, Download } from "lucide-react";
 
 type Siswa = {
   id: number;
@@ -88,6 +89,21 @@ export default function AdminDashboardPage() {
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-6"> Data Siswa</h1>
 
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        <button className="flex items-center gap-2 px-4 py-2 bg-sky-600 text-white cursor-pointer rounded-lg hover:bg-sky-700 active:scale-95 transition">
+          <Plus className="w-4 h-4" />
+          Tambah Siswa
+        </button>
+        <button className="flex items-center gap-2 px-4 py-2 border border-gray-300  cursor-pointer rounded-lg bg-green-600 hover:bg-emerald-500 text-white active:scale-95 transition">
+          <Upload className="w-4 h-4" />
+          Import
+        </button>
+        <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 cursor-pointer rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white active:scale-95 transition">
+          <Download className="w-4 h-4" />
+          Export
+        </button>
+      </div>
+
       <div className="flex flex-wrap justify-between items-center mb-4 gap-2">
         <input
           type="text"
@@ -134,6 +150,7 @@ export default function AdminDashboardPage() {
                 Dibuat
                 <ArrowUpDown className="inline w-4 h-4 ml-1 text-gray-400" />
               </th>
+              <th>Aksi</th>
             </tr>
           </thead>
 
@@ -159,6 +176,17 @@ export default function AdminDashboardPage() {
                   <td className="px-4 py-3">{Array.isArray(item.kelas) ? item.kelas[0]?.nama || "Tidak ada kelas" : item.kelas?.nama || "Tidak ada kelas"}</td>
                   <td className="px-4 py-3 text-gray-500">{item.user_id ? item.user_id.slice(0, 8) + "..." : "-"}</td>
                   <td className="px-4 py-3 text-gray-500 text-xs">{item.created_at ? new Date(item.created_at).toLocaleString("id-ID") : "-"}</td>
+                  <td className="flex flex-wrap gap-2 py-2">
+                    <button title="Detail" className="p-2 rounded-full bg-blue-600 cursor-pointer text-white hover:bg-blue-100 transition">
+                      <Eye className="w-4 h-4" />
+                    </button>
+                    <button title="Edit" className="p-2 rounded-full bg-yellow-400 cursor-pointer text-black hover:bg-yellow-100 transition">
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button title="Hapus" className="p-2 rounded-full bg-red-600 cursor-pointer text-white hover:bg-red-100 transition">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </td>
                 </tr>
               ))
             )}
@@ -175,13 +203,13 @@ export default function AdminDashboardPage() {
         </span>
 
         <div className="flex gap-2">
-          <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="px-3 py-1 border rounded-md text-gray-600 hover:bg-gray-100 disabled:opacity-40">
+          <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="px-3 py-1 border cursor-pointer rounded-md text-gray-600 hover:bg-gray-100 disabled:opacity-40">
             ← Sebelumnya
           </button>
           <span className="px-2">
             Hal {page} / {totalPages || 1}
           </span>
-          <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages} className="px-3 py-1 border rounded-md text-gray-600 hover:bg-gray-100 disabled:opacity-40">
+          <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages} className="px-3 py-1 border cursor-pointer rounded-md text-gray-600 hover:bg-gray-100 disabled:opacity-40">
             Berikutnya →
           </button>
         </div>
