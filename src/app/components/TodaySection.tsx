@@ -220,7 +220,7 @@ export default function TodaySection() {
                     <Check className="w-7 h-7" strokeWidth={3} />
                   </div>
                 ) : (
-                  <div className="flex flex-col justify-center items-center w-16 h-16 rounded-xl bg-sky-500 text-white font-bold">
+                  <div className="flex flex-col justify-center items-center w-16 h-16 rounded-xl bg-sky-500 text-white font-extrabold">
                     <div className="text-sm">{item.code}</div>
                     <div className="text-xs mt-1">{item.time}</div>
                   </div>
