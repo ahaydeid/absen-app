@@ -191,7 +191,7 @@ const Page: React.FC = () => {
                 <a key={c.absenId} href={`/log-absen/${c.absenId}`} className="block transform rounded-lg border-gray-100 bg-white p-3 shadow-sm transition hover:scale-[1.01] hover:shadow-md">
                   <div className="flex items-start justify-between">
                     <div>
-                      <h3 className="text-3xl font-extrabold text-black p-2 rounded-xl">{c.kelasNama}</h3>
+                      <h3 className="text-2xl font-extrabold text-gray-600 p-2 rounded-xl">{c.kelasNama}</h3>
                     </div>
                     <div className="text-right">
                       <h6 className="italic text-lg text-gray-600">{c.tanggal}</h6>
