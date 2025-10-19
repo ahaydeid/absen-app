@@ -215,7 +215,7 @@ export default function TodaySection() {
           items.map((item) => (
             <div key={item.jadwalId} className="flex items-center gap-3 bg-gray-50 rounded-xl p-3 relative">
               {item.status === "Selesai" ? (
-                <div className="flex items-center justify-center w-16 h-16 rounded-xl bg-green-500 text-white">
+                <div className="flex items-center justify-center w-16 h-16 rounded-xl bg-green-600 text-white">
                   <Check className="w-7 h-7" strokeWidth={3} />
                 </div>
               ) : (
@@ -238,9 +238,9 @@ export default function TodaySection() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 mt-2">
-                  {item.range && <span className="text-xs bg-yellow-300 text-gray-900 font-medium px-2 py-1 rounded-full">{item.range}</span>}
-                  {item.status === "Selesai" && <span className="text-xs bg-green-500 text-white font-semibold px-2 py-1 rounded-full">Selesai</span>}
-                  <span className="text-xs bg-gray-400 text-white font-medium px-2 py-1 rounded-full">{item.jp}</span>
+                  {item.range && <span className="text-xs border bg-yellow-300 text-gray-900 font-medium px-2 py-1 rounded-full">{item.range}</span>}
+                  {item.status === "Selesai" && <span className="text-xs border bg-green-600 text-white font-semibold px-2 py-1 rounded-full">Selesai</span>}
+                  <span className="text-xs bg-gray-500 text-white border font-medium px-2 py-1 rounded-full">{item.jp}</span>
                 </div>
               </div>
             </div>

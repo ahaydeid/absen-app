@@ -7,16 +7,16 @@ type Item = "home" | "jadwal" | "absen" | "info" | "profile";
 
 export default function BottomNav({ active = "home" }: { active?: Item }) {
   const items: { id: Item; label: string; icon: React.ReactNode; href: string }[] = [
-    { id: "home", label: "Home", icon: <Home className="w-5 h-5" />, href: "/" },
-    { id: "jadwal", label: "Jadwal", icon: <CalendarDays className="w-5 h-5" />, href: "/schedule" },
-    { id: "absen", label: "Absen", icon: <Fingerprint className="w-5 h-5" />, href: "/attendance" },
-    { id: "info", label: "Info", icon: <Info className="w-5 h-5" />, href: "/info" },
-    { id: "profile", label: "Profile", icon: <User className="w-5 h-5" />, href: "/profile" },
+    { id: "home", label: "Home", icon: <Home className="w-6 h-6" />, href: "/" },
+    { id: "jadwal", label: "Jadwal", icon: <CalendarDays className="w-6 h-6" />, href: "/schedule" },
+    { id: "absen", label: "Absen", icon: <Fingerprint className="w-6 h-6" />, href: "/guru-attendance" },
+    { id: "info", label: "Info", icon: <Info className="w-6 h-6" />, href: "/info" },
+    { id: "profile", label: "Profile", icon: <User className="w-6 h-6" />, href: "/profile" },
   ];
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200">
-      <div className="max-w-full mx-auto flex justify-between items-center h-14 px-4">
+      <div className="max-w-full mx-auto flex justify-between items-center h-15 px-4">
         {items.map((it) => {
           const isActive = it.id === active;
           return (

@@ -326,19 +326,19 @@ export default function AttendancePage() {
         </div>
 
         <div className="flex justify-around mt-4">
-          <button onClick={() => updateStatus("H")} disabled={submitting} className="bg-green-600 w-14 h-14 rounded-md flex items-center justify-center active:bg-green-700 transition-colors duration-150">
-            <Check className="text-white w-6 h-6" />
+          <button onClick={() => updateStatus("H")} disabled={submitting} className="bg-green-600 w-19 h-15 rounded-md flex items-center justify-center active:bg-green-700 transition-colors duration-150">
+            <Check className="text-white w-10 h-10" />
           </button>
 
-          <button onClick={() => updateStatus("S")} disabled={submitting} className="bg-yellow-400 w-14 h-14 rounded-md flex items-center justify-center font-bold text-lg active:bg-yellow-500 transition-colors duration-150">
+          <button onClick={() => updateStatus("S")} disabled={submitting} className="bg-yellow-400 w-19 h-15 rounded-md flex items-center justify-center font-bold text-3xl active:bg-yellow-500 transition-colors duration-150">
             S
           </button>
 
-          <button onClick={() => updateStatus("I")} disabled={submitting} className="bg-sky-400 w-14 h-14 rounded-md flex items-center justify-center font-bold text-lg text-white active:bg-sky-500 transition-colors duration-150">
+          <button onClick={() => updateStatus("I")} disabled={submitting} className="bg-sky-400 w-19 h-15 rounded-md flex items-center justify-center font-bold text-3xl text-white active:bg-sky-500 transition-colors duration-150">
             I
           </button>
 
-          <button onClick={() => updateStatus("A")} disabled={submitting} className="bg-red-500 w-14 h-14 rounded-md flex items-center justify-center font-bold text-lg text-white active:bg-red-600 transition-colors duration-150">
+          <button onClick={() => updateStatus("A")} disabled={submitting} className="bg-red-500 w-19 h-15 rounded-md flex items-center justify-center font-bold text-3xl text-white active:bg-red-600 transition-colors duration-150">
             A
           </button>
         </div>
