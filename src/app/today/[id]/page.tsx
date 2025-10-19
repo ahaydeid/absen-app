@@ -161,7 +161,6 @@ export default function TodayPage() {
                 </div>
               </div>
 
-              {/* Link membungkus span yang bergaya tombol — jadi seluruh lebar bisa diklik */}
               <Link href={`/attendance?kelas=${card.kelasId ?? card.jadwalId}`} className="block w-full mt-4">
                 <span className="block w-full bg-sky-500 text-white font-extrabold text-lg rounded-xl py-3 shadow text-center">Buka Absen</span>
               </Link>

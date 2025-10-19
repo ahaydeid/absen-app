@@ -1,19 +1,28 @@
 "use client";
 
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, Suspense } from "react"; // <-- tambah Suspense
+import { useSearchParams } from "next/navigation";
 import { Check } from "lucide-react";
 import DateDisplay from "@/components/DateDisplay";
 import { supabase } from "@/lib/supabaseClient";
+import ConfirmSave from "@/components/ConfirmSave";
 
-interface Student {
-  id: number;
-  name: string;
-  status: "" | "H" | "S" | "I" | "A";
+// ---- Wrapper page (tetap default export) ----
+export default function AttendancePage() {
+  return (
+    <Suspense fallback={<div className="p-4 text-center">Memuat...</div>}>
+      <AttendanceContent />
+    </Suspense>
+  );
 }
 
-export default function AttendancePage() {
-  // selectedKelasId sekarang inisialisasinya kosong; akan diisi di useEffect dari window.location
-  const [selectedKelasId, setSelectedKelasId] = useState<number | null>(null);
+// ---- Pindahkan seluruh isi lama komponen ke sini ----
+function AttendanceContent() {
+  interface Student {
+    id: number;
+    name: string;
+    status: "" | "H" | "S" | "I" | "A";
+  }
 
   const [students, setStudents] = useState<Student[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -27,27 +36,42 @@ export default function AttendancePage() {
   const [submitting, setSubmitting] = useState(false);
   const [jadwalId, setJadwalId] = useState<number | null>(null);
 
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
   const listRef = useRef<HTMLUListElement | null>(null);
 
   const scrollToStudent = (index: number) => {
     if (!listRef.current) return;
-    const el = listRef.current.children[index] as HTMLElement;
+    const el = listRef.current.children[index] as HTMLElement | undefined;
     if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
   };
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const sp = new URLSearchParams(window.location.search);
-    const k = sp.get("kelas");
-    if (k) {
-      const n = Number(k);
-      if (!Number.isNaN(n)) setSelectedKelasId(n);
-    }
-    // run only once on mount
-  }, []);
+  const searchParams = useSearchParams();
 
-  // Load siswa when selectedKelasId is set (or if null, load all)
+  const initialKelas = (() => {
+    const k = searchParams?.get("kelas");
+    const n = k ? Number(k) : null;
+    return k && !Number.isNaN(n) ? n : null;
+  })();
+  const [selectedKelasId, setSelectedKelasId] = useState<number | null>(initialKelas);
+
+  const fetchCounterRef = useRef(0);
+
   useEffect(() => {
+    const k = searchParams?.get("kelas");
+    const newId = k ? Number(k) : null;
+
+    if (k && Number.isNaN(newId)) {
+      setSelectedKelasId(null);
+      return;
+    }
+    setSelectedKelasId((prev) => (prev === newId ? prev : newId));
+  }, [searchParams]);
+
+  useEffect(() => {
+    fetchCounterRef.current += 1;
+    const fetchId = fetchCounterRef.current;
+
     const load = async () => {
       setLoading(true);
       setFetchError(null);
@@ -61,8 +85,10 @@ export default function AttendancePage() {
         }
 
         const res = await query;
-        const { data, error } = res;
 
+        if (fetchId !== fetchCounterRef.current) return;
+
+        const { data, error } = res;
         if (error) {
           console.error("Failed to fetch siswa:", error);
           setFetchError(error.message);
@@ -77,19 +103,19 @@ export default function AttendancePage() {
           setStudents(mapped);
         }
       } catch (err: unknown) {
+        if (fetchId !== fetchCounterRef.current) return;
         console.error("Failed to fetch siswa:", err);
         const message = err instanceof Error ? err.message : String(err);
         setFetchError(message || "Unknown error");
         setStudents([]);
       } finally {
-        setLoading(false);
+        if (fetchId === fetchCounterRef.current) setLoading(false);
       }
     };
 
     load();
   }, [selectedKelasId]);
 
-  // Load kelas name if kelas selected
   useEffect(() => {
     const loadKelasName = async () => {
       setKelasName(null);
@@ -118,7 +144,6 @@ export default function AttendancePage() {
     loadKelasName();
   }, [selectedKelasId]);
 
-  // Load jadwalId for selected kelas for today
   useEffect(() => {
     const loadJadwalId = async () => {
       setJadwalId(null);
@@ -129,13 +154,7 @@ export default function AttendancePage() {
 
       try {
         const selectStr = "id, kelas_id, hari_id, jam_id";
-        const resp = await supabase
-          .from("jadwal")
-          .select(selectStr)
-          .in("hari_id", hariCandidates)
-          .eq("kelas_id", selectedKelasId)
-          .order("jam_id", { ascending: true })
-          .limit(1);
+        const resp = await supabase.from("jadwal").select(selectStr).in("hari_id", hariCandidates).eq("kelas_id", selectedKelasId).order("jam_id", { ascending: true }).limit(1);
 
         if (resp.error) {
           console.warn("Failed fetching jadwal for kelas:", resp.error);
@@ -152,7 +171,6 @@ export default function AttendancePage() {
     loadJadwalId();
   }, [selectedKelasId]);
 
-  // detect visible / center item
   useEffect(() => {
     const handleScroll = () => {
       if (!listRef.current) return;
@@ -345,13 +363,25 @@ export default function AttendancePage() {
 
         <button
           disabled={!allDone || submitting}
-          onClick={handleSubmit}
+          onClick={() => setConfirmOpen(true)} // <-- buka konfirmasi instead of langsung submit
           className={`w-full py-3 mt-4 rounded-full text-lg font-semibold flex items-center justify-center gap-2 transition ${allDone && !submitting ? "bg-green-600 text-white" : "bg-gray-300 text-gray-600 cursor-not-allowed"}`}
         >
           <Check className="w-5 h-5" />
           {submitting ? "Menyimpan..." : "Selesai"}
         </button>
       </main>
+
+      {/* Confirm modal */}
+      <ConfirmSave
+        isOpen={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        onConfirm={async () => {
+          setConfirmOpen(false);
+          await handleSubmit();
+        }}
+        title="Simpan Absen?"
+        description="Pastikan semua status kehadiran siswa sudah benar. Lanjutkan menyimpan?"
+      />
     </div>
   );
 }

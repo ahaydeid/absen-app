@@ -8,7 +8,7 @@ export default function UnderDevelopment() {
         {" "}
         <Image src="/img/underdev.gif" alt="Under development animation" fill className="object-contain" />
       </div>
-      <h1 className="text-2xl font-semibold mt-15 mb-4 text-center">Under Development</h1>
+      <h1 className="text-2xl font-semibold mt-5 mb-4 text-gray-600 text-center">Under Development</h1>
     </div>
   );
 }
