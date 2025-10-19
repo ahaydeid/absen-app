@@ -198,7 +198,7 @@ export default function TodaySection() {
   }, []);
 
   return (
-    <section className="mt-5 bg-white rounded-xl p-4 shadow-sm">
+    <section className="mt-5 bg-white rounded-xl mb-5 p-4 shadow-sm">
       <h2 className="text-lg font-bold text-gray-900 mb-3">Hari ini</h2>
 
       <div className="space-y-3">
@@ -213,37 +213,40 @@ export default function TodaySection() {
           <div className="text-sm text-gray-500">Tidak ada jadwal hari ini.</div>
         ) : (
           items.map((item) => (
-            <div key={item.jadwalId} className="flex items-center gap-3 bg-gray-50 rounded-xl p-3 relative">
-              {item.status === "Selesai" ? (
-                <div className="flex items-center justify-center w-16 h-16 rounded-xl bg-green-600 text-white">
-                  <Check className="w-7 h-7" strokeWidth={3} />
-                </div>
-              ) : (
-                <div className="flex flex-col justify-center items-center w-16 h-16 rounded-xl bg-sky-500 text-white font-bold">
-                  <div className="text-sm">{item.code}</div>
-                  <div className="text-xs mt-1">{item.time}</div>
-                </div>
-              )}
+            <Link key={item.jadwalId} href={`/today/${item.jadwalId}`} aria-label={`Buka ${item.title}`} className="block">
+              <div className="flex items-center gap-3 bg-gray-50 rounded-xl p-3 relative hover:shadow-sm transition group">
+                {item.status === "Selesai" ? (
+                  <div className="flex items-center justify-center w-16 h-16 rounded-xl bg-green-600 text-white">
+                    <Check className="w-7 h-7" strokeWidth={3} />
+                  </div>
+                ) : (
+                  <div className="flex flex-col justify-center items-center w-16 h-16 rounded-xl bg-sky-500 text-white font-bold">
+                    <div className="text-sm">{item.code}</div>
+                    <div className="text-xs mt-1">{item.time}</div>
+                  </div>
+                )}
 
-              <div className="flex-1">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <div className="text-base font-extrabold text-gray-900">{item.title}</div>
-                    <div className="italic text-gray-600 text-sm">{item.subject}</div>
+                <div className="flex-1">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <div className="text-base font-extrabold text-gray-900">{item.title}</div>
+                      <div className="italic text-gray-600 text-sm">{item.subject}</div>
+                    </div>
+
+                    {/* icon tetap ada tapi bukan Link lagi */}
+                    <span className="text-gray-400">
+                      <ArrowUpRight className="w-5 h-5" />
+                    </span>
                   </div>
 
-                  <Link href={`/today/${item.jadwalId}`}>
-                    <ArrowUpRight className="w-5 h-5 text-gray-400" />
-                  </Link>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2 mt-2">
-                  {item.range && <span className="text-xs border bg-yellow-300 text-gray-900 font-medium px-2 py-1 rounded-full">{item.range}</span>}
-                  {item.status === "Selesai" && <span className="text-xs border bg-green-600 text-white font-semibold px-2 py-1 rounded-full">Selesai</span>}
-                  <span className="text-xs bg-gray-500 text-white border font-medium px-2 py-1 rounded-full">{item.jp}</span>
+                  <div className="flex flex-wrap items-center gap-2 mt-2">
+                    {item.range && <span className="text-xs border bg-yellow-300 text-gray-900 font-medium px-2 py-1 rounded-full">{item.range}</span>}
+                    {item.status === "Selesai" && <span className="text-xs border bg-green-600 text-white font-semibold px-2 py-1 rounded-full">Selesai</span>}
+                    <span className="text-xs bg-gray-500 text-white border font-medium px-2 py-1 rounded-full">{item.jp}</span>
+                  </div>
                 </div>
               </div>
-            </div>
+            </Link>
           ))
         )}
       </div>
