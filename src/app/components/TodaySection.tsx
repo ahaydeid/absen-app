@@ -167,7 +167,7 @@ export default function TodaySection() {
         const time = mulaiRaw ? formatTime(mulaiRaw) : "";
         const range = mulaiRaw && selesaiRaw ? `${formatTime(mulaiRaw)} - ${formatTime(selesaiRaw)}` : null;
         const title = kelasRel?.nama ?? "—";
-        const subject = "Algoritma Pemrograman";
+        const subject = "";
         const jp = computeJP({ mulai: mulaiRaw, selesai: selesaiRaw });
 
         let status: string | null = null;
@@ -241,7 +241,7 @@ export default function TodaySection() {
 
                   <div className="flex flex-wrap items-center gap-2 mt-2">
                     {item.range && <span className="text-xs border bg-yellow-300 text-gray-900 font-medium px-2 py-1 rounded-full">{item.range}</span>}
-                    {item.status === "Selesai" && <span className="text-xs border bg-green-600 text-white font-semibold px-2 py-1 rounded-full">Selesai</span>}
+                    {/* {item.status === "Selesai" && <span className="text-xs border bg-green-600 text-white font-semibold px-2 py-1 rounded-full">Selesai</span>} */}
                     <span className="text-xs bg-gray-500 text-white border font-medium px-2 py-1 rounded-full">{item.jp}</span>
                   </div>
                 </div>

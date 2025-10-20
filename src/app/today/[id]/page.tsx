@@ -155,7 +155,7 @@ export default function TodayPage() {
                   <div className="font-bold text-xl text-black mt-2">{card.subject}</div>
 
                   <div className="flex items-center gap-2 mt-2">
-                    {card.range && <span className="bg-yellow-400 text-black font-bold px-3 py-1.5 rounded-full text-lg sm:text-xl">{card.range}</span>}
+                    {card.range && <span className="bg-yellow-400 text-black px-3 py-1.5 rounded-full text-lg sm:text-xl">{card.range}</span>}
                     <span className="bg-gray-700 text-white font-semibold px-3 py-1.5 rounded-full text-lg sm:text-xl">{card.jp}</span>
                   </div>
                 </div>

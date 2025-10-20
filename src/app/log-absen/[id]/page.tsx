@@ -148,33 +148,51 @@ export default function DetailAbsenPageClient() {
         const siswaById = new Map<number, string>();
         siswaData.forEach((s) => siswaById.set(s.id, s.nama));
 
-        // 6) Bangun array SiswaStatus (priority order)
-        const statusPriority: StatusKey[] = ["hadir", "sakit", "izin", "alfa"];
-        const result: SiswaStatus[] = [];
+        /* --- PERUBAHAN DI SINI ---
+           Tujuan: jangan urutkan berdasarkan status; urutkan alfabet berdasarkan nama.
+           Namun kita tetap gunakan prioritas status untuk memilih status jika ada duplikasi.
+        */
 
+        // 6a) buat map id -> status berdasarkan prioritas
+        const statusPriority: StatusKey[] = ["hadir", "sakit", "izin", "alfa"];
+        const idToStatus = new Map<number, StatusKey>();
+
+        // pertama, assign berdasarkan priority (lebih tinggi menang)
         statusPriority.forEach((key) => {
           const ids = statusesObj[key] || [];
           ids.forEach((sid) => {
-            result.push({
-              id: sid,
-              nama: siswaById.get(sid) ?? `ID ${sid}`,
-              status: key,
-            });
+            if (!idToStatus.has(sid)) {
+              idToStatus.set(sid, key);
+            }
           });
         });
 
-        // lalu tambah status lain (non-priority)
+        // lalu assign status non-priority untuk id yang belum punya status
         Object.keys(statusesObj)
           .filter((k) => !statusPriority.includes(k as StatusKey))
           .forEach((key) => {
             statusesObj[key].forEach((sid) => {
-              result.push({
-                id: sid,
-                nama: siswaById.get(sid) ?? `ID ${sid}`,
-                status: key,
-              });
+              if (!idToStatus.has(sid)) {
+                idToStatus.set(sid, key as StatusKey);
+              }
             });
           });
+
+        // 6b) bangun array SiswaStatus dari semua siswaIds, isi nama dari siswaById (fallback ke `ID ${id}`)
+        const result: SiswaStatus[] = siswaIds.map((sid) => ({
+          id: sid,
+          nama: siswaById.get(sid) ?? `ID ${sid}`,
+          status: idToStatus.get(sid) ?? "—",
+        }));
+
+        // 6c) sort berdasarkan nama alfabet (case-insensitive)
+        result.sort((a, b) => {
+          const na = String(a.nama).toLowerCase();
+          const nb = String(b.nama).toLowerCase();
+          if (na < nb) return -1;
+          if (na > nb) return 1;
+          return a.id - b.id;
+        });
 
         setSiswaList(result);
       } catch (err: unknown) {

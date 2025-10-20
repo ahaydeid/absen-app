@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { BookOpen, CalendarClock, NotebookPen, FileBarChart, Layers } from "lucide-react";
+import { BookOpen, Calendar, CalendarClock, NotebookPen, FileBarChart, Layers } from "lucide-react";
 
 type Menu = {
   title: string;
@@ -11,6 +11,7 @@ type Menu = {
 
 export default function MenuSection() {
   const menus: Menu[] = [
+    { title: "Jadwal", icon: <Calendar className="w-7 h-7 text-amber-500" />, href: "/schedule" },
     { title: "Kelas", icon: <BookOpen className="w-7 h-7 text-sky-600" />, href: "/kelas" },
     { title: "Log Absen", icon: <CalendarClock className="w-7 h-7 text-rose-500" />, href: "/log-absen" },
     { title: "Log Nilai", icon: <NotebookPen className="w-7 h-7 text-indigo-500" />, href: "/log-nilai" },

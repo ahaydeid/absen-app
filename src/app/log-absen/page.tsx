@@ -40,6 +40,21 @@ const Page: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Helper: format 'YYYY-MM-DD' -> 'D MMMM YYYY' (contoh: 20 Oktober 2025)
+  const formatDate = (dateStr: string | undefined | null): string => {
+    if (!dateStr) return "—";
+    // parsing manual untuk menghindari masalah timezone saat pakai `new Date('YYYY-MM-DD')`
+    const parts = dateStr.split("-");
+    if (parts.length < 3) return dateStr;
+    const yyyy = Number(parts[0]);
+    const mm = Number(parts[1]); // 1-12
+    const dd = Number(parts[2]);
+    if (Number.isNaN(yyyy) || Number.isNaN(mm) || Number.isNaN(dd)) return dateStr;
+
+    const d = new Date(yyyy, mm - 1, dd); // local date at midnight
+    return new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(d);
+  };
+
   useEffect(() => {
     const load = async () => {
       setLoading(true);
@@ -186,16 +201,16 @@ const Page: React.FC = () => {
           ) : cards.length === 0 ? (
             <p className="text-sm text-gray-600">Tidak ada kelas hari ini.</p>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2">
+            <div className="grid gap-1 sm:grid-cols-1 md:grid-cols-2">
               {cards.map((c) => (
-                <a key={c.absenId} href={`/log-absen/${c.absenId}`} className="block transform rounded-lg border-gray-100 bg-white p-3 shadow-sm transition hover:scale-[1.01] hover:shadow-md">
+                <a key={c.absenId} href={`/log-absen/${c.absenId}`} className="block transform rounded-lg border-gray-100 bg-white px-3 py-1 shadow-sm transition hover:scale-[1.01] hover:shadow-md">
                   <div className="flex items-start justify-between">
                     <div>
                       <h3 className="text-2xl font-extrabold text-gray-600 p-2 rounded-xl">{c.kelasNama}</h3>
                     </div>
                     <div className="text-right">
-                      <h6 className="italic text-lg text-gray-600">{c.tanggal}</h6>
-                      <p className="text-sm text-black border-gray-50 border bg-yellow-300 rounded px-1">
+                      <h6 className="text-gray-600">{formatDate(c.tanggal)}</h6>
+                      <p className="text-sm text-gray-700 border-gray-50 border bg-yellow-300 rounded px-1">
                         {c.jamMulai} - {c.jamSelesai}
                       </p>
                     </div>
