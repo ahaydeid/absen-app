@@ -3,7 +3,7 @@
 import { ArrowUpRight, Check } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { createPagesBrowserClient } from "@supabase/auth-helpers-nextjs";
 
 type RelOneOrMany<T> = T | T[] | null;
 
@@ -54,13 +54,52 @@ export default function TodaySection() {
   const [error, setError] = useState<string | null>(null);
   const [errorDetail, setErrorDetail] = useState<string | null>(null);
 
+  // use pages browser client to access session
+  const supabase = createPagesBrowserClient();
+
   useEffect(() => {
+    let mounted = true;
+
     const load = async () => {
       setLoading(true);
       setError(null);
       setErrorDetail(null);
 
       try {
+        // 0) ambil session dan cari mapping user_accounts -> user_id (referensi ke guru.id)
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!mounted) return;
+
+        if (!session) {
+          // tidak login -> kosongkan
+          setItems([]);
+          return;
+        }
+
+        const { data: acct, error: acctErr } = await supabase.from("user_accounts").select("user_id, email").eq("auth_user_id", session.user.id).maybeSingle();
+
+        if (acctErr) console.error("TodaySection: error fetching user_accounts:", acctErr);
+
+        let userAccount = acct ?? null;
+
+        // fallback: cari berdasarkan email jika mapping auth_user_id tidak ada
+        if (!userAccount && session.user.email) {
+          const { data: byEmail, error: byEmailErr } = await supabase.from("user_accounts").select("user_id, email").eq("email", session.user.email).maybeSingle();
+          if (byEmailErr) console.error("TodaySection: error fetching user_accounts by email:", byEmailErr);
+          userAccount = byEmail ?? null;
+        }
+
+        const guruId = userAccount?.user_id ?? null;
+
+        // jika tidak ada mapping ke guru -> tidak ada jadwal untuk ditampilkan
+        if (!guruId) {
+          setItems([]);
+          return;
+        }
+
         const jsDay = new Date().getDay();
         const hariId = jsDay === 0 ? null : jsDay; // 1..6 => Mon..Sat
 
@@ -69,14 +108,30 @@ export default function TodaySection() {
 
         let resp;
         if (hariId !== null) {
-          resp = await supabase.from("jadwal").select(selectStr).eq("hari_id", hariId).order("jam_id", { ascending: true }).limit(6);
+          resp = await supabase
+            .from("jadwal")
+            .select(selectStr)
+            .eq("hari_id", hariId)
+            .eq("guru_id", guruId) // <-- filter by guru_id
+            .order("jam_id", { ascending: true })
+            .limit(6);
         } else {
-          resp = await supabase.from("jadwal").select(selectStr).order("jam_id", { ascending: true }).limit(6);
+          resp = await supabase
+            .from("jadwal")
+            .select(selectStr)
+            .eq("guru_id", guruId) // <-- filter by guru_id
+            .order("jam_id", { ascending: true })
+            .limit(6);
         }
 
         if (resp.error) {
           console.warn("Supabase relation-select failed, falling back. error:", resp.error);
-          const fallback = await supabase.from("jadwal").select("id, kelas_id, mapel_id, guru_id, hari_id, jam_id, semester_id").order("jam_id", { ascending: true }).limit(6);
+          const fallback = await supabase
+            .from("jadwal")
+            .select("id, kelas_id, mapel_id, guru_id, hari_id, jam_id, semester_id")
+            .eq("guru_id", guruId) // <-- ensure fallback also filters by guru
+            .order("jam_id", { ascending: true })
+            .limit(6);
 
           if (fallback.error) throw fallback.error;
           mapAndSetItems((fallback.data ?? []) as unknown as RawJadwal[]);
@@ -86,7 +141,8 @@ export default function TodaySection() {
         const data = (resp.data ?? []) as unknown as RawJadwal[];
 
         if (!data || data.length === 0) {
-          const fallback = await supabase.from("jadwal").select(selectStr).order("id", { ascending: true }).limit(6);
+          // try broader fallback (still filter by guru_id) to get something
+          const fallback = await supabase.from("jadwal").select(selectStr).eq("guru_id", guruId).order("id", { ascending: true }).limit(6);
 
           if (fallback.error) throw fallback.error;
           mapAndSetItems((fallback.data ?? []) as unknown as RawJadwal[]);
@@ -104,7 +160,7 @@ export default function TodaySection() {
           setErrorDetail(String(err));
         }
       } finally {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     };
 
@@ -151,7 +207,7 @@ export default function TodaySection() {
 
     const mapAndSetItems = (jadwals: RawJadwal[]) => {
       const now = new Date();
-      const mapped: Item[] = jadwals.slice(0, 6).map((j) => {
+      const mapped: Item[] = (jadwals ?? []).slice(0, 6).map((j) => {
         const jamRel = takeFirst(j.jam) as { nama?: string; mulai?: string; selesai?: string } | undefined;
         const kelasRel = takeFirst(j.kelas) as { nama?: string } | undefined;
 
@@ -167,7 +223,7 @@ export default function TodaySection() {
         const time = mulaiRaw ? formatTime(mulaiRaw) : "";
         const range = mulaiRaw && selesaiRaw ? `${formatTime(mulaiRaw)} - ${formatTime(selesaiRaw)}` : null;
         const title = kelasRel?.nama ?? "—";
-        const subject = "";
+        const subject = takeFirst(j.mapel)?.nama ?? ""; // try to show mapel name if present
         const jp = computeJP({ mulai: mulaiRaw, selesai: selesaiRaw });
 
         let status: string | null = null;
@@ -194,8 +250,12 @@ export default function TodaySection() {
       setItems(mapped);
     };
 
-    load();
-  }, []);
+    void load();
+
+    return () => {
+      mounted = false;
+    };
+  }, [supabase]);
 
   return (
     <section className="mt-5 bg-white rounded-xl mb-5 p-4 shadow-sm">
@@ -241,7 +301,6 @@ export default function TodaySection() {
 
                   <div className="flex flex-wrap items-center gap-2 mt-2">
                     {item.range && <span className="text-xs border bg-yellow-300 text-gray-900 font-medium px-2 py-1 rounded-full">{item.range}</span>}
-                    {/* {item.status === "Selesai" && <span className="text-xs border bg-green-600 text-white font-semibold px-2 py-1 rounded-full">Selesai</span>} */}
                     <span className="text-xs bg-gray-500 text-white border font-medium px-2 py-1 rounded-full">{item.jp}</span>
                   </div>
                 </div>

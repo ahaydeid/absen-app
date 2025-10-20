@@ -3,6 +3,13 @@ import React, { useState } from "react";
 import ModalsRegisAccount from "@/app/admin/components/ModalsRegisAccount";
 import { UserPlus, Search } from "lucide-react";
 
+type FormPayload = {
+  email: string;
+  password: string;
+  guru_id: number;
+  role_id: number;
+};
+
 const UserAccountManagementPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -10,16 +17,28 @@ const UserAccountManagementPage = () => {
   const handleOpenModal = () => setIsModalOpen(true);
   const handleCloseModal = () => setIsModalOpen(false);
 
-  // Fungsi fetch data user dan filter akan ditempatkan di sini
-  // ...
+  // panggil API server-side yang sudah kita buat
+  const createAccount = async (payload: FormPayload): Promise<void> => {
+    const res = await fetch("/api/admin/create-user", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    const json = await res.json();
+
+    if (!res.ok) {
+      // lempar error agar ModalRegisAccount menampilkan pesan
+      throw new Error(json?.error ?? "Gagal membuat akun");
+    }
+    // jika perlu, kamu bisa return json atau trigger refresh data di sini
+  };
 
   return (
     <div className="p-4 md:p-8">
       {/* HEADER DAN KONTROL */}
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-extrabold text-gray-800 flex items-center">
-          Manajemen Akun Pengguna
-        </h1>
+        <h1 className="text-3xl font-extrabold text-gray-800 flex items-center">Manajemen Akun Pengguna</h1>
 
         <button
           onClick={handleOpenModal}
@@ -57,7 +76,7 @@ const UserAccountManagementPage = () => {
       </div>
 
       {/* MODAL PENDAFTARAN AKUN */}
-      <ModalsRegisAccount isOpen={isModalOpen} onClose={handleCloseModal} />
+      <ModalsRegisAccount isOpen={isModalOpen} onClose={handleCloseModal} onSubmit={createAccount} />
     </div>
   );
 };

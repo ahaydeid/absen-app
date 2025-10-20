@@ -53,7 +53,7 @@ export default function LoginPageClient() {
       <main className="w-full max-w-md px-4 sm:px-6 pt-12 pb-6">
         <header className="flex items-center gap-3 px-2 mb-8 justify-center">
           <div className="flex items-center gap-3">
-            <div className="w-14 h-14 rounded-full flex items-center justify-center bg-white shadow-lg">
+            <div className="w-14 h-14 rounded-full flex items-center justify-center bg-white shadow">
               {/* Asumsi: Anda memiliki file /logo.png di folder public */}
               <Image
                 src="/logo.png"
@@ -68,14 +68,14 @@ export default function LoginPageClient() {
             </div>
 
             <div className="leading-tight">
-              <div className="text-lg font-semibold text-gray-900">Absen Siswa</div>
-              <div className="text-xl font-extrabold text-sky-600">SMK AL Badar</div>
+              <div className="text-xl font-extrabold text-sky-600">Badar Edu</div>
+              <div className="text-lg font-semibold text-gray-900">SMK Al Badar</div>
             </div>
           </div>
         </header>
 
-        <section className="bg-white rounded-3xl shadow-xl border border-gray-100 mt-6 p-6 sm:p-8">
-          <h1 className="text-center text-2xl font-extrabold tracking-tight text-gray-800 mb-6">Masuk Akun</h1>
+        <section className="bg-white rounded-3xl shadow border border-gray-100 mt-6 p-6 sm:p-8">
+          <h1 className="text-center text-2xl font-extrabold tracking-tight text-gray-800 mb-6">Login</h1>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
@@ -112,7 +112,7 @@ export default function LoginPageClient() {
               <button
                 type="button"
                 onClick={() => setShowPassword((s) => !s)}
-                className="absolute cursor-pointer right-3 top-1/2 transform -translate-y-1/2 p-2 pt-4 text-gray-500 hover:text-sky-600 transition"
+                className="absolute cursor-pointer right-3 top-1/2 transform -translate-y-1/2 p-2 pt-8 text-gray-500 hover:text-sky-600 transition"
                 aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
               >
                 {showPassword ? (
@@ -131,7 +131,7 @@ export default function LoginPageClient() {
             {error && <p className="text-sm text-center font-medium text-red-600 bg-red-50 p-2 rounded-lg">{error}</p>}
 
             <div>
-              <button type="submit" className="w-full bg-sky-600 hover:bg-sky-700 text-white font-bold cursor-pointer rounded-full py-3 shadow-md shadow-sky-200 transition duration-200">
+              <button type="submit" className="w-full bg-sky-600 hover:bg-sky-700 text-white font-bold cursor-pointer rounded-full py-3 shadow-md transition duration-200">
                 Login
               </button>
             </div>
