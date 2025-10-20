@@ -68,7 +68,7 @@ const Page: React.FC = () => {
         const todayStr = `${yyyy}-${mm}-${dd}`;
 
         // Ambil absen hari ini (tanpa generic untuk menghindari error TS)
-        const absenResp = await supabase.from("absen").select("id, tanggal, jadwal_id").eq("tanggal", todayStr).order("id", { ascending: true });
+        const absenResp = await supabase.from("absen").select("id, tanggal, jadwal_id").eq("tanggal", todayStr).order("id", { ascending: false });
 
         if (absenResp.error) throw absenResp.error;
         const absenData = absenResp.data as AbsenRow[] | null;
@@ -199,7 +199,7 @@ const Page: React.FC = () => {
           ) : error ? (
             <p className="text-sm text-red-600">Error: {error}</p>
           ) : cards.length === 0 ? (
-            <p className="text-sm text-gray-600">Tidak ada kelas hari ini.</p>
+            <p className="text-sm text-gray-600">Belum ada absensi hari ini.</p>
           ) : (
             <div className="grid gap-1 sm:grid-cols-1 md:grid-cols-2">
               {cards.map((c) => (

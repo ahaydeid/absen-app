@@ -3,22 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  LayoutDashboard,
-  Users,
-  GraduationCap,
-  CalendarClock,
-  FileText,
-  Menu,
-  X,
-  CalendarCog,
-  ChevronDown,
-  ChevronUp,
-  School,
-  BookOpen,
-  ClipboardCheck,
-  Loader2,
-} from "lucide-react";
+import { LayoutDashboard, Users, GraduationCap, CalendarClock, FileText, Menu, X, CalendarCog, ChevronDown, ChevronUp, School, BookOpen, ClipboardCheck, Loader2, User } from "lucide-react";
 
 export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(true);
@@ -36,6 +21,7 @@ export default function Sidebar() {
     { name: "Absen", icon: ClipboardCheck, path: "/admin/absen" },
     { name: "Kelas", icon: School, path: "/admin/kelas" },
     { name: "Mata Pelajaran", icon: BookOpen, path: "/admin/mata-pelajaran" },
+    { name: "Akun", icon: User, path: "/admin/account" },
   ];
 
   const absenSubmenus = [
@@ -45,8 +31,13 @@ export default function Sidebar() {
   ];
 
   const configSubmenus = [
+    { name: "Config Kelas", path: "/admin/config-kelas" },
+    { name: "Config Guru", path: "/admin/config-guru" },
+    { name: "Config Mapel", path: "/admin/config-mapel" },
     { name: "Config Hari", path: "/admin/config-hari" },
     { name: "Config Jam", path: "/admin/config-jam" },
+    { name: "Config Semester", path: "/admin/config-semester" },
+    { name: "Config JP", path: "/admin/config-jp" },
   ];
 
   return (

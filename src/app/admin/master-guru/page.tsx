@@ -107,10 +107,10 @@ export default function MasterGuruPage() {
   const totalPages = Math.max(1, Math.ceil(totalRows / perPage));
 
   return (
-    <div className="p-6">
+    <div className="p-2">
       <h1 className="text-2xl font-bold mb-6">Data Guru</h1>
 
-      <div className="flex flex-wrap items-center gap-3 mb-4">
+      <div className="flex flex-wrap items-center gap-2 mb-4">
         <button className="flex items-center gap-2 px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 active:scale-95 transition">
           <Plus className="w-4 h-4" />
           Tambah Guru
@@ -151,7 +151,7 @@ export default function MasterGuruPage() {
         </select>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-gray-200 shadow-sm bg-white">
+      <div className="overflow-x-auto rounded border border-gray-200 shadow-sm bg-white">
         <table className="min-w-full text-sm border-collapse">
           <thead className="bg-gray-100 text-gray-700">
             <tr>
@@ -193,7 +193,7 @@ export default function MasterGuruPage() {
                   <td className="px-4 py-3">{item.mapel?.nama || "-"}</td>
                   <td className="px-4 py-3">{item.email || "-"}</td>
                   <td className="px-4 py-3 text-gray-500 text-xs">{item.created_at ? new Date(item.created_at).toLocaleString("id-ID") : "-"}</td>
-                  <td className="flex flex-wrap gap-2 py-2">
+                  <td className="flex gap-1 py-2 px-2">
                     <button title="Detail" className="p-2 rounded-full bg-blue-600 text-white hover:bg-blue-500 transition">
                       <Eye className="w-4 h-4" />
                     </button>

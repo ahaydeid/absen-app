@@ -131,7 +131,7 @@ export default function AdminDashboardPage() {
       </div>
 
       {/*Tabel */}
-      <div className="overflow-x-auto rounded-lg border border-gray-200 shadow-sm bg-white">
+      <div className="overflow-x-auto rounded border border-gray-200 shadow-sm bg-white">
         <table className="min-w-full text-sm border-collapse">
           <thead className="bg-gray-100 text-gray-700">
             <tr>
@@ -176,7 +176,7 @@ export default function AdminDashboardPage() {
                   <td className="px-4 py-3">{Array.isArray(item.kelas) ? item.kelas[0]?.nama || "Tidak ada kelas" : item.kelas?.nama || "Tidak ada kelas"}</td>
                   <td className="px-4 py-3 text-gray-500">{item.user_id ? item.user_id.slice(0, 8) + "..." : "-"}</td>
                   <td className="px-4 py-3 text-gray-500 text-xs">{item.created_at ? new Date(item.created_at).toLocaleString("id-ID") : "-"}</td>
-                  <td className="flex flex-wrap gap-2 py-2">
+                  <td className="flex gap-2 py-2 px-2">
                     <button title="Detail" className="p-2 rounded-full bg-blue-600 cursor-pointer text-white hover:bg-blue-100 transition">
                       <Eye className="w-4 h-4" />
                     </button>

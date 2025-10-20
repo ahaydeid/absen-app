@@ -1,12 +1,11 @@
 "use client";
 
-import Image from "next/image";
 import DateDisplay from "@/components/DateDisplay";
+import { User2 } from "lucide-react";
 
 export default function HeroSection() {
   return (
     <>
-      {/* Tanggal */}
       <p className="text-xs sm:text-sm md:text-lg font-bold text-gray-800 mb-0 md:mb-3 flex-1">
         <DateDisplay />
       </p>
@@ -15,7 +14,7 @@ export default function HeroSection() {
           {/* Logo */}
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 md:w-16 md:h-16 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
-              <Image src="/logo.png" alt="Logo Sekolah" width={64} height={64} className="object-contain w-full h-full" />
+              {/* <Image src="/logo.png" alt="Logo Sekolah" width={64} height={64} className="object-contain w-full h-full" /> */}
             </div>
           </div>
 
@@ -25,8 +24,8 @@ export default function HeroSection() {
           </div>
 
           {/* Foto Guru */}
-          <div className="w-10 h-10 md:w-14 md:h-14 rounded-full overflow-hidden border border-gray-200 flex-shrink-0 ml-2">
-            <Image src="/profile.png" alt="Foto Guru" width={56} height={56} className="object-cover w-full h-full" />
+          <div className="w-10 h-10 md:w-14 md:h-14 rounded-full border border-gray-200 flex-shrink-0 ml-2 bg-gray-600 flex items-center justify-center">
+            <User2 className="w-6 h-6 md:w-8 md:h-8 text-white" role="img" aria-label="Foto Guru" />
           </div>
         </div>
       </div>
