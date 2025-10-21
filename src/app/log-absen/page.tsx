@@ -1,9 +1,12 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import DateDisplay from "@/components/DateDisplay";
 import { createPagesBrowserClient } from "@supabase/auth-helpers-nextjs";
 
+// --- Tipe Data ---
+
+// Disederhanakan untuk kemudahan referensi
 type AbsenRow = {
   id: number;
   tanggal: string; // 'YYYY-MM-DD'
@@ -14,7 +17,6 @@ type JadwalRow = {
   id: number;
   kelas_id: number;
   jam_id: number;
-  guru_id?: number | null;
 };
 
 type KelasRow = {
@@ -36,151 +38,148 @@ type CardData = {
   jamSelesai: string;
 };
 
+// --- Komponen Utama ---
+
 const Page: React.FC = () => {
   const [cards, setCards] = useState<CardData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // State baru untuk menangani filter tanggal
+  const [dateFrom, setDateFrom] = useState<string | null>(null);
+  const [dateTo, setDateTo] = useState<string | null>(null);
+  // State untuk trigger ulang load data saat filter diterapkan
+  const [filterTrigger, setFilterTrigger] = useState(0);
+
   const supabase = createPagesBrowserClient();
 
-  // Helper: format 'YYYY-MM-DD' -> 'D MMMM YYYY' (contoh: 20 Oktober 2025)
-  const formatDate = (dateStr: string | undefined | null): string => {
+  // Helper: format 'YYYY-MM-DD' -> 'D MMMM YYYY' (memoized function)
+  const formatDate = useCallback((dateStr: string | undefined | null): string => {
     if (!dateStr) return "—";
-    const parts = dateStr.split("-");
-    if (parts.length < 3) return dateStr;
-    const yyyy = Number(parts[0]);
-    const mm = Number(parts[1]); // 1-12
-    const dd = Number(parts[2]);
-    if (Number.isNaN(yyyy) || Number.isNaN(mm) || Number.isNaN(dd)) return dateStr;
+    try {
+      const [yyyy, mm, dd] = dateStr.split("-").map(Number);
+      if (Number.isNaN(yyyy) || Number.isNaN(mm) || Number.isNaN(dd)) return dateStr;
 
-    const d = new Date(yyyy, mm - 1, dd);
-    return new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(d);
+      // Catatan: Month di Date constructor adalah 0-indexed
+      const d = new Date(yyyy, mm - 1, dd);
+      // Gunakan Intl.DateTimeFormat untuk format lokal yang benar
+      return new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(d);
+    } catch {
+      return dateStr;
+    }
+  }, []);
+
+  const handleApplyFilter = () => {
+    // Trigger useEffect untuk memuat data baru
+    setFilterTrigger((prev) => prev + 1);
   };
 
   useEffect(() => {
     let mounted = true;
 
-    const load = async () => {
+    const loadAbsen = async () => {
       setLoading(true);
       setError(null);
 
       try {
-        // ambil session
+        // 1. Ambil Session & Guru ID
         const {
           data: { session },
         } = await supabase.auth.getSession();
-
-        if (!mounted) return;
-
-        if (!session) {
+        if (!mounted || !session) {
           setCards([]);
-          setLoading(false);
           return;
         }
 
-        // cari mapping user_accounts -> user_id (referensi ke guru.id)
-        const { data: acct, error: acctErr } = await supabase.from("user_accounts").select("user_id, email").eq("auth_user_id", session.user.id).maybeSingle();
+        const { data: acct } = await supabase.from("user_accounts").select("user_id").eq("auth_user_id", session.user.id).maybeSingle();
 
-        if (acctErr) console.error("Error fetching user_accounts:", acctErr);
-
-        let userAccount = acct ?? null;
-
-        // fallback by email
-        if (!userAccount && session.user.email) {
-          const { data: byEmail, error: byEmailErr } = await supabase.from("user_accounts").select("user_id, email").eq("email", session.user.email).maybeSingle();
-          if (byEmailErr) console.error("Error fetching user_accounts by email:", byEmailErr);
-          userAccount = byEmail ?? null;
+        const guruId = acct?.user_id ?? null;
+        if (!guruId) {
+          setCards([]);
+          return;
         }
 
-        const guruId = userAccount?.user_id ?? null;
+        // 2. Query Absen (FILTER PENGGANTI)
+        let absenQuery = supabase.from("absen").select("id, tanggal, jadwal_id").order("tanggal", { ascending: false }); // Urutkan berdasarkan tanggal terbaru
 
-        // siapkan tanggal hari ini
-        const today = new Date();
-        const yyyy = today.getFullYear();
-        const mm = String(today.getMonth() + 1).padStart(2, "0");
-        const dd = String(today.getDate()).padStart(2, "0");
-        const todayStr = `${yyyy}-${mm}-${dd}`;
+        // Terapkan Filter "Dari" dan "Sampai" jika ada
+        if (dateFrom) {
+          absenQuery = absenQuery.gte("tanggal", dateFrom);
+        }
+        if (dateTo) {
+          absenQuery = absenQuery.lte("tanggal", dateTo);
+        }
 
-        // ambil absen hari ini
-        const absenResp = await supabase.from("absen").select("id, tanggal, jadwal_id").eq("tanggal", todayStr).order("id", { ascending: false });
+        // JIKA TIDAK ADA FILTER, Query AKAN MENGAMBIL SEMUA DATA (sampai batas default Supabase)
+        // Kita tidak lagi memfilter berdasarkan tanggal hari ini
 
-        if (absenResp.error) throw absenResp.error;
-        const absenData = (absenResp.data ?? []) as AbsenRow[];
+        const { data: absenData, error: absenErr } = await absenQuery;
+        if (absenErr) throw absenErr;
 
         if (!absenData || absenData.length === 0) {
           setCards([]);
-          setLoading(false);
           return;
         }
 
-        // jika tidak ada mapping guru -> kosongkan (guru tidak punya jadwal)
-        if (!guruId) {
-          setCards([]);
-          setLoading(false);
-          return;
-        }
+        const absenRows = absenData as AbsenRow[];
+        const jadwalIds = Array.from(new Set(absenRows.map((a) => a.jadwal_id)));
 
-        // kumpulkan jadwalIds dari absen hari ini
-        const jadwalIds = Array.from(new Set(absenData.map((a) => a.jadwal_id)));
+        // 3. Ambil Jadwal yang Relevan (milik Guru ini)
+        const { data: jadwalData, error: jadwalErr } = await supabase
+          .from("jadwal")
+          .select("id, kelas_id, jam_id") // guru_id tidak perlu dipilih lagi karena sudah dipakai filter
+          .in("id", jadwalIds)
+          .eq("guru_id", guruId);
 
-        // ambil jadwal yang termasuk di jadwalIds dan milik guru yang login
-        const jadwalResp = await supabase.from("jadwal").select("id, kelas_id, jam_id, guru_id").in("id", jadwalIds).eq("guru_id", guruId);
+        if (jadwalErr) throw jadwalErr;
 
-        if (jadwalResp.error) throw jadwalResp.error;
-        const jadwalData = (jadwalResp.data ?? []) as JadwalRow[];
-
-        // jika tidak ada jadwal yang cocok (semua absen bukan milik guru ini)
-        if (!jadwalData || jadwalData.length === 0) {
-          setCards([]);
-          setLoading(false);
-          return;
-        }
-
-        // ambil kelas dan jam berdasarkan referensi dari jadwal yang relevan
-        const kelasIds = Array.from(new Set(jadwalData.map((j) => j.kelas_id)));
-        const jamIds = Array.from(new Set(jadwalData.map((j) => j.jam_id)));
-
-        const kelasResp = await supabase.from("kelas").select("id, nama").in("id", kelasIds);
-        if (kelasResp.error) throw kelasResp.error;
-        const kelasData = (kelasResp.data ?? []) as KelasRow[];
-
-        const jamResp = await supabase.from("jam").select("id, mulai, selesai").in("id", jamIds);
-        if (jamResp.error) throw jamResp.error;
-        const jamData = (jamResp.data ?? []) as JamRow[];
-
-        // buat map lookup
+        const jadwalRows = (jadwalData ?? []) as JadwalRow[];
         const jadwalById = new Map<number, JadwalRow>();
-        (jadwalData || []).forEach((j) => jadwalById.set(j.id, j));
+        jadwalRows.forEach((j) => jadwalById.set(j.id, j));
 
+        // Filter absen yang jadwalnya BUKAN milik guru ini
+        const relevantAbsen = absenRows.filter((a) => jadwalById.has(a.jadwal_id));
+
+        if (relevantAbsen.length === 0) {
+          setCards([]);
+          return;
+        }
+
+        // 4. Ambil Kelas & Jam
+        const kelasIds = Array.from(new Set(jadwalRows.map((j) => j.kelas_id)));
+        const jamIds = Array.from(new Set(jadwalRows.map((j) => j.jam_id)));
+
+        const [kelasResp, jamResp] = await Promise.all([supabase.from("kelas").select("id, nama").in("id", kelasIds), supabase.from("jam").select("id, mulai, selesai").in("id", jamIds)]);
+
+        if (kelasResp.error) throw kelasResp.error;
+        if (jamResp.error) throw jamResp.error;
+
+        // 5. Buat Map Lookup
         const kelasById = new Map<number, string>();
-        (kelasData || []).forEach((k) => kelasById.set(k.id, k.nama));
+        (kelasResp.data as KelasRow[]).forEach((k) => kelasById.set(k.id, k.nama));
 
         const jamById = new Map<number, { mulai: string; selesai: string }>();
-        (jamData || []).forEach((j) => jamById.set(j.id, { mulai: j.mulai, selesai: j.selesai }));
+        (jamResp.data as JamRow[]).forEach((j) => jamById.set(j.id, { mulai: j.mulai, selesai: j.selesai }));
 
-        // bangun cards hanya untuk absen yang jadwalnya milik guru (ada di jadwalById)
-        const built: CardData[] = (absenData || [])
-          .map((a) => {
-            const jadwal = jadwalById.get(a.jadwal_id);
-            if (!jadwal) return null; // skip absen yang bukan milik guru tersebut
+        // 6. Bangun Cards
+        const builtCards: CardData[] = relevantAbsen.map((a) => {
+          const jadwal = jadwalById.get(a.jadwal_id)!; // Dijamin ada karena sudah difilter
+          const kelasNama = kelasById.get(jadwal.kelas_id) ?? "—";
+          const jamObj = jamById.get(jadwal.jam_id);
 
-            const kelasNama = jadwal ? kelasById.get(jadwal.kelas_id) ?? "—" : "—";
-            const jamObj = jadwal ? jamById.get(jadwal.jam_id) : undefined;
-
-            return {
-              absenId: a.id,
-              kelasNama,
-              tanggal: a.tanggal,
-              jamMulai: jamObj?.mulai ?? "—",
-              jamSelesai: jamObj?.selesai ?? "—",
-            } as CardData;
-          })
-          .filter((x): x is CardData => x !== null);
+          return {
+            absenId: a.id,
+            kelasNama,
+            tanggal: a.tanggal,
+            jamMulai: jamObj?.mulai ?? "—",
+            jamSelesai: jamObj?.selesai ?? "—",
+          };
+        });
 
         if (!mounted) return;
-        setCards(built);
+        setCards(builtCards);
       } catch (err: unknown) {
-        console.error(err);
+        console.error("Error loading absen data:", err);
         if (err instanceof Error) {
           if (mounted) setError(err.message);
         } else {
@@ -191,12 +190,13 @@ const Page: React.FC = () => {
       }
     };
 
-    void load();
+    void loadAbsen();
 
     return () => {
       mounted = false;
     };
-  }, [supabase]);
+    // Tambahkan dateFrom, dateTo, dan filterTrigger sebagai dependency
+  }, [supabase, dateFrom, dateTo, filterTrigger]);
 
   return (
     <main className="min-h-screen bg-gray-50 p-6">
@@ -205,7 +205,7 @@ const Page: React.FC = () => {
           <h1 className="text-2xl text-center font-semibold text-gray-800">Log Absen Siswa</h1>
         </header>
 
-        {/* filter UI tetap seperti semula (bisa dihubungkan ke state kalau mau) */}
+        {/* --- Filter Section --- */}
         <section className="bg-white rounded-lg shadow-sm p-4 mb-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:gap-6">
             <div className="flex-1">
@@ -220,7 +220,7 @@ const Page: React.FC = () => {
                   id="search"
                   type="text"
                   placeholder="Cari by nama kelas, guru, atau jam"
-                  className="w-full rounded-md border border-gray-200 bg-white py-2 pl-10 pr-3 text-sm shadow-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  className="w-full rounded-md border border-gray-200 bg-white py-2 pl-10 pr-3 text-sm shadow-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-sky-500"
                 />
               </div>
             </div>
@@ -229,26 +229,39 @@ const Page: React.FC = () => {
                 <label htmlFor="dateFrom" className="block text-xs font-medium text-gray-600 mb-1">
                   Dari
                 </label>
-                <input id="dateFrom" type="date" className="w-full rounded-md border border-gray-200 bg-white py-2 px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-indigo-500" />
+                <input
+                  id="dateFrom"
+                  type="date"
+                  value={dateFrom || ""}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  className="w-full rounded-md border border-gray-200 bg-white py-2 px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-sky-500"
+                />
               </div>
               <div className="flex flex-col w-1/2">
                 <label htmlFor="dateTo" className="block text-xs font-medium text-gray-600 mb-1">
                   Sampai
                 </label>
-                <input id="dateTo" type="date" className="w-full rounded-md border border-gray-200 bg-white py-2 px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-indigo-500" />
+                <input
+                  id="dateTo"
+                  type="date"
+                  value={dateTo || ""}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  className="w-full rounded-md border border-gray-200 bg-white py-2 px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-sky-500"
+                />
               </div>
             </div>
             <div className="w-full md:w-auto">
-              <button type="button" className="w-full md:w-auto text-center font-bold items-center gap-2 rounded-md bg-sky-600 px-3 py-2 text-sm text-white shadow-sm hover:bg-indigo-700">
+              <button type="button" onClick={handleApplyFilter} className="w-full md:w-auto text-center font-bold items-center gap-2 rounded-md bg-sky-600 px-3 py-2 text-sm text-white shadow-sm hover:bg-sky-700 transition duration-150">
                 Terapkan
               </button>
             </div>
           </div>
         </section>
 
+        {/* --- Daftar Kelas Absen --- */}
         <section>
-          <div className="flex">
-            <h2 className="text-lg font-medium text-gray-800 mb-3">Kelas hari ini</h2>
+          <div className="flex items-center">
+            <h2 className="text-lg font-medium text-gray-800 mb-3">{dateFrom || dateTo ? "Hasil Filter Absen" : "Semua Log Absen"}</h2>
             <p className="text-xs sm:text-sm md:text-lg font-bold text-gray-600 text-right flex-1">
               <DateDisplay />
             </p>
@@ -259,18 +272,18 @@ const Page: React.FC = () => {
           ) : error ? (
             <p className="text-sm text-red-600">Error: {error}</p>
           ) : cards.length === 0 ? (
-            <p className="text-sm text-gray-600">Belum ada absensi hari ini.</p>
+            <p className="text-sm text-gray-600">Tidak ada log absensi ditemukan {dateFrom || dateTo ? "untuk periode ini." : "."}</p>
           ) : (
-            <div className="grid gap-1 sm:grid-cols-1 md:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2">
               {cards.map((c) => (
-                <a key={c.absenId} href={`/log-absen/${c.absenId}`} className="block transform rounded-lg border-gray-100 bg-white px-3 py-1 shadow-sm transition hover:scale-[1.01] hover:shadow-md">
+                <a key={c.absenId} href={`/log-absen/${c.absenId}`} className="block transform rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-md transition hover:scale-[1.01] hover:shadow-lg">
                   <div className="flex items-start justify-between">
                     <div>
-                      <h3 className="text-2xl font-extrabold text-gray-600 p-2 rounded-xl">{c.kelasNama}</h3>
+                      <h3 className="text-xl font-extrabold text-gray-800">{c.kelasNama}</h3>
                     </div>
                     <div className="text-right">
-                      <h6 className="text-gray-600">{formatDate(c.tanggal)}</h6>
-                      <p className="text-sm text-gray-700 border-gray-50 border bg-yellow-300 rounded px-1">
+                      <h6 className="text-sm text-gray-600 mb-1">{formatDate(c.tanggal)}</h6>
+                      <p className="text-xs text-gray-700 border border-gray-300 bg-yellow-300 font-semibold rounded-full px-2 py-0.5 inline-block">
                         {c.jamMulai} - {c.jamSelesai}
                       </p>
                     </div>
