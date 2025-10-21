@@ -274,12 +274,12 @@ const Page: React.FC = () => {
           ) : cards.length === 0 ? (
             <p className="text-sm text-gray-600">Tidak ada log absensi ditemukan {dateFrom || dateTo ? "untuk periode ini." : "."}</p>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2">
+            <div className="grid gap-1 sm:grid-cols-1 md:grid-cols-2">
               {cards.map((c) => (
-                <a key={c.absenId} href={`/log-absen/${c.absenId}`} className="block transform rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-md transition hover:scale-[1.01] hover:shadow-lg">
+                <a key={c.absenId} href={`/log-absen/${c.absenId}`} className="block transform rounded border border-gray-200 bg-white px-4 py-3 transition hover:scale-[1.01] hover:shadow">
                   <div className="flex items-start justify-between">
                     <div>
-                      <h3 className="text-xl font-extrabold text-gray-800">{c.kelasNama}</h3>
+                      <h3 className="text-xl mt-2 font-extrabold text-gray-800">{c.kelasNama}</h3>
                     </div>
                     <div className="text-right">
                       <h6 className="text-sm text-gray-600 mb-1">{formatDate(c.tanggal)}</h6>

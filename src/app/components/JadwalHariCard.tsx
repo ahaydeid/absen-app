@@ -25,9 +25,9 @@ interface JadwalHariCardProps {
 export default function JadwalHariCard({ day, list }: JadwalHariCardProps) {
   return (
     <section key={day.id} className="mb-4">
-      <div className="rounded-xl border bg-[#009ed6] p-2 py-3 md:p-4 flex flex-row gap-4">
+      <div className="rounded-sm border-2 bg-[#009ed6] shadow p-2 py-3 md:p-4 flex flex-row gap-4">
         <div className="w-1/5 flex-shrink-0 flex items-center justify-center">
-          <h2 className="text-center text-white text-xl md:text-[16px] font-bold">{day.nama}</h2>
+          <h2 className="text-center text-white text-xl md:text-[16px] font-extrabold">{day.nama}</h2>
         </div>
 
         <div className="flex-1 min-h-0">
