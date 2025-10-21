@@ -221,7 +221,7 @@ export default function TodaySection() {
   }, [supabase, mapAndSetItems, hariIdToday]); // Tambahkan dependensi mapAndSetItems
 
   return (
-    <section className="mt-5 bg-white rounded-xl mb-5 p-4 shadow-sm">
+    <section className="mt-5 bg-white rounded-lg mb-5 p-4 shadow-sm">
       <h2 className="text-lg font-bold text-gray-900 mb-3">Hari ini</h2>
 
       <div className="space-y-3">
@@ -237,9 +237,9 @@ export default function TodaySection() {
         ) : (
           items.map((item) => (
             <Link key={item.jadwalId} href={`/today/${item.jadwalId}`} aria-label={`Buka ${item.title}`} className="block">
-              <div className="flex items-center gap-3 bg-gray-50 rounded-xl p-3 relative hover:shadow-sm transition group">
+              <div className="flex items-center gap-3 bg-gray-50 border rounded-lg p-3 relative hover:shadow-sm transition group">
                 {item.status === "Selesai" ? (
-                  <div className="flex items-center justify-center w-16 h-16 rounded-xl bg-green-600 text-white">
+                  <div className="flex items-center justify-center w-16 h-16 rounded-lg bg-green-600 text-white">
                     <Check className="w-7 h-7" strokeWidth={3} />
                   </div>
                 ) : (

@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
-import DateDisplay from "@/components/DateDisplay";
 import { createPagesBrowserClient } from "@supabase/auth-helpers-nextjs";
 
 // --- Tipe Data ---
@@ -206,8 +205,8 @@ const Page: React.FC = () => {
         </header>
 
         {/* --- Filter Section --- */}
-        <section className="bg-white rounded-lg shadow-sm p-4 mb-6">
-          <div className="flex flex-col gap-4 md:flex-row md:items-end md:gap-6">
+        <section className="bg-white rounded sticky shadow-sm p-4 mb-6">
+          <div className="flex flex-col gap-4 sticky md:flex-row md:items-end md:gap-6">
             <div className="flex-1">
               <label htmlFor="search" className="block text-xs font-medium text-gray-600 mb-1">
                 Cari kelas
@@ -220,7 +219,7 @@ const Page: React.FC = () => {
                   id="search"
                   type="text"
                   placeholder="Cari by nama kelas, guru, atau jam"
-                  className="w-full rounded-md border border-gray-200 bg-white py-2 pl-10 pr-3 text-sm shadow-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                  className="w-full rounded-md border border-gray-200 bg-white py-4 pl-10 pr-3 text-sm shadow-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-sky-500"
                 />
               </div>
             </div>
@@ -234,7 +233,7 @@ const Page: React.FC = () => {
                   type="date"
                   value={dateFrom || ""}
                   onChange={(e) => setDateFrom(e.target.value)}
-                  className="w-full rounded-md border border-gray-200 bg-white py-2 px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-sky-500"
+                  className="w-full rounded-md border border-gray-200 bg-white py-4 px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-sky-500"
                 />
               </div>
               <div className="flex flex-col w-1/2">
@@ -246,12 +245,12 @@ const Page: React.FC = () => {
                   type="date"
                   value={dateTo || ""}
                   onChange={(e) => setDateTo(e.target.value)}
-                  className="w-full rounded-md border border-gray-200 bg-white py-2 px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-sky-500"
+                  className="w-full rounded-md border border-gray-200 bg-white py-4 px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-sky-500"
                 />
               </div>
             </div>
             <div className="w-full md:w-auto">
-              <button type="button" onClick={handleApplyFilter} className="w-full md:w-auto text-center font-bold items-center gap-2 rounded-md bg-sky-600 px-3 py-2 text-sm text-white shadow-sm hover:bg-sky-700 transition duration-150">
+              <button type="button" onClick={handleApplyFilter} className="w-full md:w-auto text-center font-bold items-center gap-2 rounded-md bg-sky-600 px-3 py-5 text-lg text-white shadow-sm hover:bg-sky-700 transition duration-150">
                 Terapkan
               </button>
             </div>
@@ -261,10 +260,7 @@ const Page: React.FC = () => {
         {/* --- Daftar Kelas Absen --- */}
         <section>
           <div className="flex items-center">
-            <h2 className="text-lg font-medium text-gray-800 mb-3">{dateFrom || dateTo ? "Hasil Filter Absen" : "Semua Log Absen"}</h2>
-            <p className="text-xs sm:text-sm md:text-lg font-bold text-gray-600 text-right flex-1">
-              <DateDisplay />
-            </p>
+            <h2 className="text-lg font-medium text-gray-800 mb-3">{dateFrom || dateTo ? "Hasil Filter Absen" : "Semua Log"}</h2>
           </div>
 
           {loading ? (
@@ -276,7 +272,7 @@ const Page: React.FC = () => {
           ) : (
             <div className="grid gap-1 sm:grid-cols-1 md:grid-cols-2">
               {cards.map((c) => (
-                <a key={c.absenId} href={`/log-absen/${c.absenId}`} className="block transform rounded border border-gray-200 bg-white px-4 py-3 transition hover:scale-[1.01] hover:shadow">
+                <a key={c.absenId} href={`/log-absen/${c.absenId}`} className="block transform rounded-sm border border-gray-200 bg-white px-4 py-3 transition hover:scale-[1.01] hover:shadow">
                   <div className="flex items-start justify-between">
                     <div>
                       <h3 className="text-xl mt-2 font-extrabold text-gray-800">{c.kelasNama}</h3>
