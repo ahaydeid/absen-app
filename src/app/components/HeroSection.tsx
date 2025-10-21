@@ -152,14 +152,14 @@ export default function HeroSection() {
               </>
             ) : (
               <>
-                <div className="text-gray-900 font-extrabold text-sm md:text-lg leading-tight">{name ?? "Pengguna"}</div>
-                <div className="text-gray-700 text-xs md:text-base">{subject ?? "-"}</div>
+                <div className="text-gray-900 font-extrabold text-xl mb-[-5] md:text-lg">{name ?? "Pengguna"}</div>
+                <div className="text-gray-700 text-lg md:text-base">{subject ?? "-"}</div>
               </>
             )}
           </div>
 
-          <div className="w-10 h-10 md:w-14 md:h-14 rounded-full border border-gray-200 flex-shrink-0 ml-2 bg-gray-600 flex items-center justify-center">
-            <User2 className="w-6 h-6 md:w-8 md:h-8 text-white" role="img" aria-label="Foto Guru" />
+          <div className="w-15 h-15 md:w-14 md:h-14 rounded-full border border-gray-200 flex-shrink-0 ml-2 bg-gray-600 flex items-center justify-center">
+            <User2 className="w-10 h-10 md:w-10 md:h-10 text-white" role="img" aria-label="Foto Guru" />
           </div>
         </div>
       </div>

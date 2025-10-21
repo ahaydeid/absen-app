@@ -11,12 +11,21 @@ export async function middleware(req: NextRequest) {
   const res = NextResponse.next();
   const { pathname } = req.nextUrl;
 
-  const PUBLIC_PREFIXES = ["/_next", "/static", "/api"];
-  const PUBLIC_EXACT = ["/login", "/favicon.ico"];
+  // PUBLIC paths & prefixes that should NOT be redirected
+  const PUBLIC_PREFIXES = [
+    "/_next",
+    "/static",
+    "/api",
+    "/icons", // allow /icons/*
+    "/_next/static", // explicit
+    "/_next/image",
+  ];
+  const PUBLIC_EXACT = ["/login", "/favicon.ico", "/manifest.json", "/sw.js", "/robots.txt", "/sitemap.xml"];
 
-  // allow public paths
+  // allow public exact paths
   if (PUBLIC_EXACT.includes(pathname)) return res;
-  if (PUBLIC_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + "/"))) return res;
+  // allow public prefixes (exact match or startsWith)
+  if (PUBLIC_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + "/") || pathname.startsWith(p))) return res;
 
   // if auth check disabled, still create client to hydrate session but don't enforce role routing
   if (!isAuthCheckEnabled()) {
@@ -109,5 +118,6 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next|api|static|login|favicon\\.ico).*)", "/"],
+  // exclude public assets (manifest, sw, icons, _next, api, static, login, favicon)
+  matcher: ["/((?!_next|api|static|login|favicon\\.ico|manifest\\.json|sw\\.js|icons).*)", "/"],
 };
