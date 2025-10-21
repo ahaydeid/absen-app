@@ -5,7 +5,7 @@ export default function Footer() {
     <footer className="w-full bg-white border-t border-gray-200 text-gray-600 text-sm">
       <div className="max-w-6xl mx-auto px-4 py-3 flex flex-col sm:flex-row items-center justify-between">
         <p className="text-center sm:text-left">
-          © {new Date().getFullYear()} <span className="font-semibold text-gray-800">Badar Edu</span>. Semua hak dilindungi.
+          © {new Date().getFullYear()} <span className="font-semibold text-gray-800">Badar Edu</span>.
         </p>
 
         <div className="flex items-center gap-4 mt-2 sm:mt-0">

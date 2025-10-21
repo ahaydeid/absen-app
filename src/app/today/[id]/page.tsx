@@ -2,7 +2,7 @@
 
 import { CheckCircle2 } from "lucide-react";
 import Link from "next/link";
-import DateDisplay from "@/components/DateDisplay";
+import DateDisplay from "@/app/components/DateDisplay";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useParams, useSearchParams } from "next/navigation";

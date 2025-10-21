@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, UserCheck, UserX, UserMinus } from "lucide-react";
 import { LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
-import DateDisplay from "@/components/DateDisplay";
+import DateDisplay from "@/app/components/DateDisplay";
 
 export default function AdminDashboardPage() {
   const dataGuru = [

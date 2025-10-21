@@ -3,8 +3,8 @@
 import React, { useRef, useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { Check } from "lucide-react";
-import DateDisplay from "@/components/DateDisplay";
-import ConfirmSave from "@/components/ConfirmSave";
+import DateDisplay from "@/app/components/DateDisplay";
+import ConfirmSave from "@/components/ui/ConfirmSave";
 import { supabase } from "@/lib/supabaseClient";
 
 interface Student {

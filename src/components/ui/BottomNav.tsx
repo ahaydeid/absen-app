@@ -1,48 +1,25 @@
+// src/components/ui/BottomNav.tsx
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { createPagesBrowserClient } from "@supabase/auth-helpers-nextjs";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { Home, CalendarDays, Fingerprint, Info, User, LogOut } from "lucide-react";
 
 type Item = "home" | "jadwal" | "absen" | "info" | "profile";
 
-export default function BottomNav({ active = "home" }: { active?: Item }) {
+export default function BottomNav() {
+  // --- Hooks: selalu deklarasikan semuanya di sini (top-level) ---
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
-  const [sessionExists, setSessionExists] = useState<boolean | null>(null); // null = loading
   const profileRef = useRef<HTMLDivElement>(null);
-  const supabase = createPagesBrowserClient();
+
+  // memoize supabase client
+  const supabase = useMemo(() => createPagesBrowserClient(), []);
   const router = useRouter();
+  const pathname = usePathname();
 
-  // check session on mount and listen to auth changes
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        if (!mounted) return;
-        setSessionExists(Boolean(session));
-      } catch (err) {
-        console.error("Failed to get session:", err);
-        if (!mounted) return;
-        setSessionExists(false);
-      }
-    })();
-
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSessionExists(Boolean(session));
-    });
-
-    return () => {
-      mounted = false;
-      sub?.subscription?.unsubscribe?.();
-    };
-  }, [supabase]);
-
-  // close dropdown on outside click
+  // close dropdown on outside click — hook juga harus berada di top-level
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
@@ -52,7 +29,17 @@ export default function BottomNav({ active = "home" }: { active?: Item }) {
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [profileRef]);
+  }, []);
+
+  // === NOW we can safely do early returns based on pathname (hooks already run) ===
+  // Jika pathname dimulai dengan /login, jangan render BottomNav sama sekali.
+  if (typeof pathname === "string" && pathname.startsWith("/login")) {
+    return null;
+  }
+
+  // optional: hide on other specific paths (example)
+  const hideOnPaths = ["/some-fullscreen-page"];
+  if (hideOnPaths.includes(pathname ?? "/")) return null;
 
   const items: { id: Item; label: string; icon: React.ReactNode; href: string }[] = [
     { id: "home", label: "Home", icon: <Home className="w-6 h-6" />, href: "/" },
@@ -67,7 +54,6 @@ export default function BottomNav({ active = "home" }: { active?: Item }) {
     setIsProfileDropdownOpen((prev) => !prev);
   };
 
-  // Logout handler
   const handleLogout = async (e?: React.MouseEvent) => {
     e?.preventDefault();
     setIsProfileDropdownOpen(false);
@@ -75,41 +61,34 @@ export default function BottomNav({ active = "home" }: { active?: Item }) {
     setIsSigningOut(true);
 
     try {
-      // 1) sign out client-side
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
 
-      // 2) notify server to clear cookies (ensure /api/auth exists and clears cookies)
-      await fetch("/api/auth", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ event: "SIGNED_OUT", session: null }),
-      });
+      // opsional: notify server to clear cookies if `/api/auth` exists
+      try {
+        await fetch("/api/auth", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ event: "SIGNED_OUT", session: null }),
+        });
+      } catch (err) {
+        console.warn("Failed to notify /api/auth on sign out:", err);
+      }
 
-      // 3) redirect to login and refresh
       router.push("/login");
-      router.refresh();
     } catch (err) {
       console.error("Logout failed:", err);
-      // optionally show toast / alert — simple fallback:
       alert("Gagal logout. Coba lagi.");
     } finally {
       setIsSigningOut(false);
     }
   };
 
-  // While we are checking session, don't render anything (avoid flicker)
-  if (sessionExists === null) return null;
-
-  // If there's no session, hide BottomNav
-  if (!sessionExists) return null;
-
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-10">
       <div className="max-w-full mx-auto flex justify-between items-center h-15 px-4">
         {items.map((it) => {
-          const isActive = it.id === active;
-
+          const isActive = it.href === pathname || (it.href === "/" && pathname === "/");
           if (it.id === "profile") {
             return (
               <div
@@ -138,7 +117,6 @@ export default function BottomNav({ active = "home" }: { active?: Item }) {
             );
           }
 
-          // Default Links
           return (
             <a key={it.id} href={it.href} className={`flex-1 flex flex-col items-center justify-center text-xs py-2 focus:outline-none transition ${isActive ? "text-gray-900 font-medium" : "text-gray-500 hover:text-gray-700"}`}>
               <div>{it.icon}</div>

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import DateDisplay from "@/components/DateDisplay";
+import DateDisplay from "@/app/components/DateDisplay";
 import { User2 } from "lucide-react";
 import { createPagesBrowserClient } from "@supabase/auth-helpers-nextjs";
 
@@ -136,9 +136,9 @@ export default function HeroSection() {
   return (
     <>
       <div className="top-0 left-0 right-0 bg-white border-t border-gray-200">
-      <p className="text-sm md:text-lg font-bold text-gray-800 mb-[-10] p-1 flex-1">
-        <DateDisplay />
-      </p>
+        <p className="text-sm md:text-lg font-bold text-gray-800 mb-[-10] p-1 flex-1">
+          <DateDisplay />
+        </p>
         <div className="mx-auto flex items-center justify-between px-3 md:px-6 py-2 md:py-3">
           {/* <div className="flex items-center gap-3">
             <div className="w-10 h-10 md:w-16 md:h-16 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center" />
