@@ -280,7 +280,8 @@ const Page: React.FC = () => {
                     <div className="text-right">
                       <h6 className="text-sm text-gray-600 mb-1">{formatDate(c.tanggal)}</h6>
                       <p className="text-xs text-gray-700 border border-gray-300 bg-yellow-300 font-semibold rounded-full px-2 py-0.5 inline-block">
-                        {c.jamMulai} - {c.jamSelesai}
+                        {/* Menggunakan substring(0, 5) untuk mengambil HH:MM dari HH:MM:SS */}
+                        {c.jamMulai.substring(0, 5)} - {c.jamSelesai.substring(0, 5)}
                       </p>
                     </div>
                   </div>
