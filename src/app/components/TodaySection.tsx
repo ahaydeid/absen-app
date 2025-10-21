@@ -239,11 +239,11 @@ export default function TodaySection() {
             <Link key={item.jadwalId} href={`/today/${item.jadwalId}`} aria-label={`Buka ${item.title}`} className="block">
               <div className="flex items-center gap-3 bg-gray-50 border rounded-lg p-3 relative hover:shadow-sm transition group">
                 {item.status === "Selesai" ? (
-                  <div className="flex items-center justify-center w-16 h-16 rounded-lg bg-green-600 text-white">
+                  <div className="flex items-center justify-center w-18 h-18 rounded-lg bg-green-600 text-white">
                     <Check className="w-7 h-7" strokeWidth={3} />
                   </div>
                 ) : (
-                  <div className="flex flex-col justify-center items-center w-16 h-16 rounded-xl bg-sky-500 text-white font-extrabold">
+                  <div className="flex flex-col justify-center items-center w-18 h-18 rounded-xl bg-sky-500 text-white font-extrabold">
                     <div className="text-sm">{item.code}</div>
                     <div className="text-xs mt-1">{item.time}</div>
                   </div>
