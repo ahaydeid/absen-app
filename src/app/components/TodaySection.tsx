@@ -2,8 +2,10 @@
 
 import { ArrowUpRight, Check } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { createPagesBrowserClient } from "@supabase/auth-helpers-nextjs";
+
+// --- Tipe Data (Disederhanakan) ---
 
 type RelOneOrMany<T> = T | T[] | null;
 
@@ -14,39 +16,82 @@ type RawJadwal = {
   guru_id?: number | null;
   hari_id?: number | null;
   jam_id?: number | null;
-  semester_id?: number | null;
   kelas?: RelOneOrMany<{ nama?: string }>;
   mapel?: RelOneOrMany<{ nama?: string }>;
-  // NOTE: don't request durasi here (column doesn't exist)
   jam?: RelOneOrMany<{ nama?: string; mulai?: string; selesai?: string }>;
 };
 
 type Item = {
   id: number;
-  kode: string;
   code: string;
   time: string;
   title: string;
   subject: string;
   range: string | null;
   jp: string;
-  status: string | null;
+  status: "Selesai" | "Berlangsung" | null;
   kelasId?: number | null;
   jadwalId: number;
 };
 
+// --- Fungsi Utilitas (Direstrukturisasi dan Disederhanakan) ---
+
 function extractErrorMessage(err: unknown): string {
-  if (!err) return "Unknown error";
   if (err instanceof Error) return err.message;
   const e = err as Record<string, unknown>;
-  if (typeof e.message === "string") return e.message;
-  if (typeof e.error === "string") return e.error;
-  try {
-    return JSON.stringify(err, Object.getOwnPropertyNames(err), 2);
-  } catch {
-    return String(err);
-  }
+  if (typeof e?.message === "string") return e.message;
+  if (typeof e?.error === "string") return e.error;
+  return "Terjadi kesalahan yang tidak diketahui.";
 }
+
+// Helper untuk mengambil nilai pertama dari relasi (jika array atau null)
+const takeFirst = <T,>(v: RelOneOrMany<T>): T | undefined => {
+  if (!v) return undefined;
+  return Array.isArray(v) ? v[0] : v;
+};
+
+// Fungsi untuk mendapatkan hari_id hari ini (1=Senin... 7=Minggu) di zona waktu WIB
+const getTodayHariIdWIB = (): number | null => {
+  // Gunakan 'Asia/Jakarta' untuk WIB
+  const nowWIB = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
+  const jsDay = nowWIB.getDay(); // 0=Minggu, 1=Senin, ..., 6=Sabtu
+  // Mapping: 1=Senin, ..., 6=Sabtu. Jika Minggu (0), kembalikan null atau 7 (tergantung skema DB)
+  // Umumnya jadwal hanya ada Senin-Sabtu.
+  return jsDay === 0 ? null : jsDay;
+};
+
+// Fungsi untuk menghitung JP dari durasi
+const computeJP = (jam: { mulai?: string; selesai?: string } | undefined): string => {
+  if (!jam?.mulai || !jam?.selesai) return "1 JP";
+
+  const toMinutes = (timeStr: string) => {
+    const [hh = 0, mm = 0] = timeStr.split(":").map(Number);
+    return hh * 60 + mm;
+  };
+
+  const m1 = toMinutes(jam.mulai);
+  const m2 = toMinutes(jam.selesai);
+
+  if (m2 > m1) {
+    const minutes = m2 - m1;
+    // Asumsi 1 JP = 45 menit
+    const jp = Math.max(1, Math.ceil(minutes / 45));
+    return `${jp} JP`;
+  }
+  return "1 JP";
+};
+
+// Fungsi untuk memformat waktu HH:MM
+const formatTime = (raw: string): string => {
+  if (!raw) return "";
+  const parts = raw.split(":");
+  const hh = Number(parts[0] ?? 0);
+  const mm = Number(parts[1] ?? 0);
+  const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
+  return `${pad(hh)}:${pad(mm)}`;
+};
+
+// --- Komponen Utama ---
 
 export default function TodaySection() {
   const [items, setItems] = useState<Item[]>([]);
@@ -54,8 +99,61 @@ export default function TodaySection() {
   const [error, setError] = useState<string | null>(null);
   const [errorDetail, setErrorDetail] = useState<string | null>(null);
 
-  // use pages browser client to access session
   const supabase = createPagesBrowserClient();
+  const hariIdToday = getTodayHariIdWIB();
+
+  const mapAndSetItems = useCallback((jadwals: RawJadwal[]) => {
+    // Gunakan waktu WIB untuk menentukan status Selesai
+    const nowWIB = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
+
+    const mapped: Item[] = (jadwals ?? []).slice(0, 6).map((j) => {
+      const jamRel = takeFirst(j.jam) as { nama?: string; mulai?: string; selesai?: string } | undefined;
+      const kelasRel = takeFirst(j.kelas) as { nama?: string } | undefined;
+
+      const mulaiRaw = jamRel?.mulai ?? "";
+      const selesaiRaw = jamRel?.selesai ?? "";
+
+      const timeRange = mulaiRaw && selesaiRaw ? `${formatTime(mulaiRaw)} - ${formatTime(selesaiRaw)}` : null;
+
+      const title = kelasRel?.nama ?? "—";
+      const subject = takeFirst(j.mapel)?.nama ?? "";
+      const jp = computeJP(jamRel);
+      const code = jamRel?.nama || (j.jam_id ? `J-${j.jam_id}` : `J-${j.id}`);
+      const time = mulaiRaw ? formatTime(mulaiRaw) : "";
+
+      let status: "Selesai" | "Berlangsung" | null = null;
+      if (mulaiRaw && selesaiRaw) {
+        // Hanya bandingkan waktu (jam, menit) hari ini
+        const [hMulai, mMulai] = mulaiRaw.split(":").map(Number);
+        const [hSelesai, mSelesai] = selesaiRaw.split(":").map(Number);
+
+        const nowMinutes = nowWIB.getHours() * 60 + nowWIB.getMinutes();
+        const mulaiMinutes = hMulai * 60 + mMulai;
+        const selesaiMinutes = hSelesai * 60 + mSelesai;
+
+        if (nowMinutes >= selesaiMinutes) {
+          status = "Selesai";
+        } else if (nowMinutes >= mulaiMinutes && nowMinutes < selesaiMinutes) {
+          status = "Berlangsung"; // Tambahkan status berlangsung jika diperlukan
+        }
+      }
+
+      return {
+        id: j.id,
+        code,
+        time,
+        title,
+        subject,
+        range: timeRange,
+        jp,
+        status,
+        kelasId: j.kelas_id ?? null,
+        jadwalId: j.id,
+      };
+    });
+
+    setItems(mapped);
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -66,188 +164,53 @@ export default function TodaySection() {
       setErrorDetail(null);
 
       try {
-        // 0) ambil session dan cari mapping user_accounts -> user_id (referensi ke guru.id)
+        // 1. Ambil session
         const {
           data: { session },
         } = await supabase.auth.getSession();
 
-        if (!mounted) return;
-
-        if (!session) {
-          // tidak login -> kosongkan
+        if (!mounted || !session) {
           setItems([]);
           return;
         }
 
-        const { data: acct, error: acctErr } = await supabase.from("user_accounts").select("user_id, email").eq("auth_user_id", session.user.id).maybeSingle();
+        // 2. Ambil user_id (guru_id) dari user_accounts
+        const { data: acct, error: acctErr } = await supabase.from("user_accounts").select("user_id").eq("auth_user_id", session.user.id).maybeSingle();
 
-        if (acctErr) console.error("TodaySection: error fetching user_accounts:", acctErr);
+        if (acctErr) console.warn("Error fetching user_accounts:", acctErr);
 
-        let userAccount = acct ?? null;
+        const guruId = acct?.user_id ?? null;
 
-        // fallback: cari berdasarkan email jika mapping auth_user_id tidak ada
-        if (!userAccount && session.user.email) {
-          const { data: byEmail, error: byEmailErr } = await supabase.from("user_accounts").select("user_id, email").eq("email", session.user.email).maybeSingle();
-          if (byEmailErr) console.error("TodaySection: error fetching user_accounts by email:", byEmailErr);
-          userAccount = byEmail ?? null;
-        }
-
-        const guruId = userAccount?.user_id ?? null;
-
-        // jika tidak ada mapping ke guru -> tidak ada jadwal untuk ditampilkan
-        if (!guruId) {
+        if (!guruId || hariIdToday === null) {
+          // Tidak ada mapping ke guru, atau hari ini Minggu (asumsi tidak ada jadwal)
           setItems([]);
           return;
         }
 
-        const jsDay = new Date().getDay();
-        const hariId = jsDay === 0 ? null : jsDay; // 1..6 => Mon..Sat
+        // 3. Ambil Jadwal HARI INI (sesuai hariIdToday WIB) dan guru_id
+        const selectStr = `id, kelas_id, mapel_id, guru_id, hari_id, jam_id, ` + `kelas:kelas_id(nama), mapel:mapel_id(nama), jam:jam_id(nama,mulai,selesai)`;
 
-        // removed durasi from jam select
-        const selectStr = `id, kelas_id, mapel_id, guru_id, hari_id, jam_id, semester_id, ` + `kelas:kelas_id(nama), mapel:mapel_id(nama), jam:jam_id(nama,mulai,selesai)`;
+        const { data, error: jadwalErr } = await supabase
+          .from("jadwal")
+          .select(selectStr)
+          .eq("hari_id", hariIdToday) // FILTER UTAMA: Hanya Hari Ini (WIB)
+          .eq("guru_id", guruId) // FILTER KEDUA: Hanya Guru yang Login
+          .order("jam_id", { ascending: true }); // Limit 6 tidak diperlukan jika kita hanya ingin yang hari ini
 
-        let resp;
-        if (hariId !== null) {
-          resp = await supabase
-            .from("jadwal")
-            .select(selectStr)
-            .eq("hari_id", hariId)
-            .eq("guru_id", guruId) // <-- filter by guru_id
-            .order("jam_id", { ascending: true })
-            .limit(6);
-        } else {
-          resp = await supabase
-            .from("jadwal")
-            .select(selectStr)
-            .eq("guru_id", guruId) // <-- filter by guru_id
-            .order("jam_id", { ascending: true })
-            .limit(6);
+        if (jadwalErr) {
+          // Jika terjadi error pada query relasi, tampilkan error
+          console.error("Supabase jadwal query failed:", jadwalErr);
+          throw jadwalErr;
         }
 
-        if (resp.error) {
-          console.warn("Supabase relation-select failed, falling back. error:", resp.error);
-          const fallback = await supabase
-            .from("jadwal")
-            .select("id, kelas_id, mapel_id, guru_id, hari_id, jam_id, semester_id")
-            .eq("guru_id", guruId) // <-- ensure fallback also filters by guru
-            .order("jam_id", { ascending: true })
-            .limit(6);
-
-          if (fallback.error) throw fallback.error;
-          mapAndSetItems((fallback.data ?? []) as unknown as RawJadwal[]);
-          return;
-        }
-
-        const data = (resp.data ?? []) as unknown as RawJadwal[];
-
-        if (!data || data.length === 0) {
-          // try broader fallback (still filter by guru_id) to get something
-          const fallback = await supabase.from("jadwal").select(selectStr).eq("guru_id", guruId).order("id", { ascending: true }).limit(6);
-
-          if (fallback.error) throw fallback.error;
-          mapAndSetItems((fallback.data ?? []) as unknown as RawJadwal[]);
-          return;
-        }
-
-        mapAndSetItems(data);
+        mapAndSetItems((data ?? []) as unknown as RawJadwal[]);
       } catch (err: unknown) {
         console.error("Error in TodaySection.load:", err);
-        const msg = extractErrorMessage(err);
-        setError(msg);
-        try {
-          setErrorDetail(typeof err === "object" ? JSON.stringify(err, Object.getOwnPropertyNames(err), 2) : String(err));
-        } catch {
-          setErrorDetail(String(err));
-        }
+        setError(extractErrorMessage(err));
+        setErrorDetail(typeof err === "object" ? JSON.stringify(err, Object.getOwnPropertyNames(err), 2) : String(err));
       } finally {
         if (mounted) setLoading(false);
       }
-    };
-
-    const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
-    const formatTime = (raw: string) => {
-      if (!raw) return "";
-      const parts = raw.split(":");
-      const hh = Number(parts[0] ?? 0);
-      const mm = Number(parts[1] ?? 0);
-      return `${pad(hh)}:${pad(mm)}`;
-    };
-    const toMinutes = (timeStr: string) => {
-      const parts = timeStr.split(":").map((p) => Number(p));
-      const hh = parts[0] ?? 0;
-      const mm = parts[1] ?? 0;
-      return hh * 60 + mm;
-    };
-    const combineDateAndTime = (date: Date, timeStr: string) => {
-      const d = new Date(date);
-      const [hh = "0", mm = "0"] = timeStr.split(":");
-      d.setHours(Number(hh), Number(mm), 0, 0);
-      return d;
-    };
-
-    const takeFirst = <T,>(v: RelOneOrMany<T>): T | undefined => {
-      if (!v) return undefined;
-      return Array.isArray(v) ? v[0] : v;
-    };
-
-    // compute JP only from mulai/selesai (since durasi col not present)
-    const computeJP = (jam: { mulai?: string; selesai?: string } | undefined) => {
-      if (!jam) return "1 JP";
-      if (jam.mulai && jam.selesai) {
-        const m1 = toMinutes(jam.mulai);
-        const m2 = toMinutes(jam.selesai);
-        if (!isNaN(m1) && !isNaN(m2) && m2 > m1) {
-          const minutes = m2 - m1;
-          const jp = Math.max(1, Math.ceil(minutes / 45));
-          return `${jp} JP`;
-        }
-      }
-      return "1 JP";
-    };
-
-    const mapAndSetItems = (jadwals: RawJadwal[]) => {
-      const now = new Date();
-      const mapped: Item[] = (jadwals ?? []).slice(0, 6).map((j) => {
-        const jamRel = takeFirst(j.jam) as { nama?: string; mulai?: string; selesai?: string } | undefined;
-        const kelasRel = takeFirst(j.kelas) as { nama?: string } | undefined;
-
-        if (!kelasRel?.nama) {
-          console.warn(`jadwal.id=${j.id} missing kelas.nama (kelas_id=${j.kelas_id})`);
-        }
-
-        const mulaiRaw = jamRel?.mulai ?? "";
-        const selesaiRaw = jamRel?.selesai ?? "";
-        const jamNama = jamRel?.nama ?? "";
-
-        const code = jamNama || (j.jam_id ? `J-${j.jam_id}` : `J-${j.id}`);
-        const time = mulaiRaw ? formatTime(mulaiRaw) : "";
-        const range = mulaiRaw && selesaiRaw ? `${formatTime(mulaiRaw)} - ${formatTime(selesaiRaw)}` : null;
-        const title = kelasRel?.nama ?? "—";
-        const subject = takeFirst(j.mapel)?.nama ?? ""; // try to show mapel name if present
-        const jp = computeJP({ mulai: mulaiRaw, selesai: selesaiRaw });
-
-        let status: string | null = null;
-        if (mulaiRaw) {
-          const mulaiDate = combineDateAndTime(now, mulaiRaw);
-          if (mulaiDate < now) status = "Selesai";
-        }
-
-        return {
-          id: j.id,
-          kode: code,
-          code,
-          time,
-          title,
-          subject,
-          range,
-          jp,
-          status,
-          kelasId: j.kelas_id ?? null,
-          jadwalId: j.id,
-        };
-      });
-
-      setItems(mapped);
     };
 
     void load();
@@ -255,7 +218,7 @@ export default function TodaySection() {
     return () => {
       mounted = false;
     };
-  }, [supabase]);
+  }, [supabase, mapAndSetItems, hariIdToday]); // Tambahkan dependensi mapAndSetItems
 
   return (
     <section className="mt-5 bg-white rounded-xl mb-5 p-4 shadow-sm">
@@ -293,7 +256,6 @@ export default function TodaySection() {
                       <div className="italic text-gray-600 text-sm">{item.subject}</div>
                     </div>
 
-                    {/* icon tetap ada tapi bukan Link lagi */}
                     <span className="text-gray-400">
                       <ArrowUpRight className="w-5 h-5" />
                     </span>
