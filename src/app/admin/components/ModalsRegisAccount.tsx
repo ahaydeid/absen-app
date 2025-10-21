@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useRef, useState, useCallback } from "react";
-import { PlusCircle, Loader2, X, Users, ChevronDown } from "lucide-react";
+import { PlusCircle, Loader2, X, ChevronDown } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 
 type Role = { id: number; nama: string };
@@ -239,7 +239,7 @@ export default function ModalRegisAccount({ isOpen, onClose, onSubmit, isSubmitt
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-auto transform transition-all duration-300 scale-100 ease-out">
         <div className="sticky top-0 bg-white p-5 border-b flex items-center justify-between z-10">
           <h3 className="text-xl font-bold flex items-center gap-2 text-gray-800">
-            <Users className="w-6 h-6 text-blue-600" /> Pendaftaran Akun Baru
+            Pendaftaran Akun Baru
           </h3>
           <button onClick={onClose} disabled={isSubmitting} aria-label="Tutup" className="p-1 rounded-full text-gray-500 hover:bg-gray-100 transition">
             <X className="w-6 h-6" />
@@ -331,7 +331,7 @@ export default function ModalRegisAccount({ isOpen, onClose, onSubmit, isSubmitt
             <button
               type="submit"
               disabled={disabled}
-              className={`w-full flex items-center justify-center gap-2 py-3 rounded-lg text-lg font-semibold transition duration-200 ${
+              className={`w-full flex items-center justify-center gap-2 py-3 cursor-pointer rounded-lg text-lg font-semibold transition duration-200 ${
                 disabled ? "bg-gray-300 text-gray-600 cursor-not-allowed" : "bg-blue-600 text-white hover:bg-blue-700"
               }`}
             >
