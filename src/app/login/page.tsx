@@ -1,7 +1,6 @@
 // app/login/page.tsx
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useState, useMemo } from "react";
 import { createPagesBrowserClient } from "@supabase/auth-helpers-nextjs";
@@ -88,18 +87,6 @@ export default function LoginPageClient() {
       <main className="w-full max-w-md px-4 sm:px-6 pt-12 pb-6">
         <header className="flex items-center gap-3 px-2 mb-8 justify-center">
           <div className="flex items-center gap-3">
-            <div className="w-14 h-14 rounded-full flex items-center justify-center bg-white shadow">
-              <Image
-                src="/logo.png"
-                alt="Logo"
-                width={48}
-                height={48}
-                className="rounded-full object-cover"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = "https://placehold.co/48x48/6366f1/ffffff?text=L";
-                }}
-              />
-            </div>
             <div className="leading-tight">
               <div className="text-xl font-extrabold text-sky-600">Badar Edu</div>
               <div className="text-lg font-semibold text-gray-900">SMK Al Badar</div>
