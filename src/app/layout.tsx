@@ -19,7 +19,7 @@ const geistMono = Geist_Mono({
 // 1. Tambahkan konfigurasi Viewport
 // Ini mengontrol perilaku tampilan di perangkat mobile dan tema warna OS.
 export const viewport: Viewport = {
-  themeColor: "#4F46E5", // Contoh warna Indigo 600
+  themeColor: "#4F46E5", // Warna tema = Indigo 600
   initialScale: 1,
   width: "device-width",
   userScalable: false,

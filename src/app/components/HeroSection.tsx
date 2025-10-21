@@ -140,9 +140,9 @@ export default function HeroSection() {
       </p>
       <div className="top-0 left-0 right-0 bg-white border-t border-gray-200">
         <div className="mx-auto flex items-center justify-between px-3 md:px-6 py-2 md:py-3">
-          <div className="flex items-center gap-3">
+          {/* <div className="flex items-center gap-3">
             <div className="w-10 h-10 md:w-16 md:h-16 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center" />
-          </div>
+          </div> */}
 
           <div className="flex flex-col items-end flex-shrink-0 ml-auto">
             {loading ? (
@@ -153,7 +153,7 @@ export default function HeroSection() {
             ) : (
               <>
                 <div className="text-gray-900 font-extrabold text-xl mb-[-5] md:text-lg">{name ?? "Pengguna"}</div>
-                <div className="text-gray-700 text-lg md:text-base">{subject ?? "-"}</div>
+                <div className="text-gray-700 text-base md:text-base">{subject ?? "-"}</div>
               </>
             )}
           </div>
