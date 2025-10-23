@@ -157,7 +157,7 @@ export default function ModalsRegisJadwal({ isOpen, onClose }: Props) {
   const isDisabled = loadingOptions || submitting;
 
   return (
-    <div className="fixed inset-0 z-50 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-xs">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-auto transform transition-all duration-300 scale-100 ease-out">
         <div className="sticky top-0 bg-white p-5 border-b flex items-center justify-between z-10">
           <h3 className="text-xl font-bold flex items-center gap-2 text-gray-800">Buat Jadwal Baru</h3>

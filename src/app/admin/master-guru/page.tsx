@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { ArrowUpDown, Eye, Pencil, Trash2, Plus, Upload, Download } from "lucide-react";
+import { ChevronLeft, ChevronRight, ArrowUpDown, Eye, Pencil, Trash2, Plus, Upload, Download } from "lucide-react";
 
 type Guru = {
   id: number;
@@ -218,15 +218,28 @@ export default function MasterGuruPage() {
           Menampilkan {(page - 1) * perPage + 1}–{Math.min(page * perPage, totalRows)} dari {totalRows} data
         </span>
 
-        <div className="flex gap-2">
-          <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="px-3 cursor-pointer py-1 border rounded-md text-gray-600 hover:bg-gray-100 disabled:opacity-40">
-            ← Sebelumnya
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1}
+            className="p-2 border border-gray-300 rounded-full text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
+            aria-label="Halaman Sebelumnya"
+          >
+            <ChevronLeft className="w-5 h-5" />
           </button>
-          <span className="px-2">
-            Hal {page} / {totalPages || 1}
+
+          {/* Tampilan rasio "1/3, dst" */}
+          <span className="px-3 py-1 text-gray-600 rounded-md font-semibold">
+            {page} / {totalPages || 1}
           </span>
-          <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages} className="px-3 cursor-pointer py-1 border rounded-md text-gray-600 hover:bg-gray-100 disabled:opacity-40">
-            Berikutnya →
+
+          <button
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page >= totalPages}
+            className="p-2 border border-gray-300 rounded-full text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
+            aria-label="Halaman Selanjutnya"
+          >
+            <ChevronRight className="w-5 h-5" />
           </button>
         </div>
       </div>

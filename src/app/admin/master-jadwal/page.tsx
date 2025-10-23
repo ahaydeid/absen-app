@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { Search, Plus, PenBox, Trash2 } from "lucide-react";
+import React, { useState, useEffect, useMemo } from "react";
+import { Search, Plus, PenBox, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import ModalsRegisJadwal from "../components/ModalsRegisJadwal";
+import ModalBuatJadwalKelas from "../components/ModalBuatJadwalKelas";
+
 import { supabase } from "@/lib/supabaseClient";
 
 interface JadwalRelasi {
@@ -23,12 +25,20 @@ interface JadwalRelasi {
   semester: { nama: string } | null;
 }
 
+// Opsi jumlah data yang ingin ditampilkan
+const PAGE_SIZE_OPTIONS = [10, 50, 100];
+
 export default function MasterJadwalPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [jadwals, setJadwals] = useState<JadwalRelasi[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // State untuk Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(PAGE_SIZE_OPTIONS[0]); // Default 10
 
   const fetchJadwal = async () => {
     setLoading(true);
@@ -45,6 +55,7 @@ export default function MasterJadwalPage() {
         semester:semester_id(nama)
       `;
 
+      // NOTE: Data diambil semua dari awal, pagination dilakukan di sisi klien
       const { data, error: fetchError } = await supabase.from("jadwal").select(selectQuery).order("hari_id", { ascending: true }).order("jam_id", { ascending: true });
 
       if (fetchError) throw fetchError;
@@ -73,13 +84,28 @@ export default function MasterJadwalPage() {
     return () => window.removeEventListener("jadwal:created", onCreated);
   }, []);
 
-  const filteredJadwal = jadwals.filter((item) => {
-    const term = searchTerm.toLowerCase();
-    const kelas = item.kelas?.nama?.toLowerCase() ?? "";
-    const guru = item.guru?.nama?.toLowerCase() ?? "";
-    const mapel = item.mapel?.nama?.toLowerCase() ?? "";
-    return kelas.includes(term) || guru.includes(term) || mapel.includes(term);
-  });
+  // Reset halaman ke-1 setiap kali searchTerm atau pageSize berubah
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, pageSize]);
+
+  const filteredJadwal = useMemo(() => {
+    return jadwals.filter((item) => {
+      const term = searchTerm.toLowerCase();
+      const kelas = item.kelas?.nama?.toLowerCase() ?? "";
+      const guru = item.guru?.nama?.toLowerCase() ?? "";
+      const mapel = item.mapel?.nama?.toLowerCase() ?? "";
+      return kelas.includes(term) || guru.includes(term) || mapel.includes(term);
+    });
+  }, [jadwals, searchTerm]);
+
+  // Logika Pagination di sisi klien
+  const totalItems = filteredJadwal.length;
+  const totalPages = Math.ceil(totalItems / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+
+  const currentJadwals = filteredJadwal.slice(startIndex, endIndex);
 
   const formatTime = (timeString: string | undefined | null): string => {
     if (!timeString) return "—";
@@ -99,72 +125,136 @@ export default function MasterJadwalPage() {
                 placeholder="Cari Mata Pelajaran..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full p-3 pl-10 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-150"
+                className="w-full p-3 pl-10 border border-gray-300 rounded-lg focus:ring-sky-500 focus:border-sky-500 transition duration-150"
               />
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             </div>
-            <button onClick={() => setIsModalOpen(true)} className="flex items-center gap-2 px-4 py-2 cursor-pointer bg-sky-600 text-white font-semibold rounded-lg shadow-md hover:bg-sky-700 transition duration-200">
-              <Plus className="w-5 h-5" /> Buat Jadwal Baru
-            </button>
+            <div className="flex gap-2">
+              <button onClick={() => setIsModalOpen(true)} className="flex items-center gap-2 px-4 py-2 cursor-pointer bg-sky-600 text-white font-semibold rounded-lg shadow-md hover:bg-sky-700 transition duration-200">
+                <Plus className="w-5 h-5" /> Sisipkan Jadwal
+              </button>
+
+              <button onClick={() => setIsBatchModalOpen(true)} className="flex items-center gap-2 px-4 py-2 cursor-pointer bg-yellow-400 italic hover:bg-yellow-300 transition duration-200">
+                Buat Jadwal Kelas
+              </button>
+            </div>
           </div>
         </header>
         <ModalsRegisJadwal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+        <ModalBuatJadwalKelas isOpen={isBatchModalOpen} onClose={() => setIsBatchModalOpen(false)} />
+
         <section className="bg-white p-4 rounded shadow-lg">
-          <h2 className="text-xl font-semibold mb-4 text-gray-700">Daftar Jadwal ({loading ? "..." : jadwals.length})</h2>
+          <h2 className="text-xl font-semibold mb-4 text-gray-700">Daftar Jadwal</h2>
           {loading && <div className="text-center py-8 text-gray-600">Memuat data jadwal...</div>}
           {error && <div className="text-center py-8 text-red-600">Error: {error}</div>}
           {!loading && jadwals.length === 0 && !error && <div className="text-center py-8 text-gray-500">Belum ada data jadwal yang terdaftar.</div>}
+
           {!loading && !error && (
-            <div className="overflow-x-auto min-h-full">
-              <table className="min-w-max w-full divide-y divide-gray-200 table-auto">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-base font-bold text-gray-500 uppercase tracking-wider">No</th>
-                    <th className="px-6 py-3 text-left text-base font-bold text-gray-500 uppercase tracking-wider">Nama Hari</th>
-                    <th className="px-6 py-3 text-left text-base font-bold text-gray-500 uppercase tracking-wider">Nama Kelas</th>
-                    <th className="px-6 py-3 text-left text-base font-bold text-gray-500 uppercase tracking-wider">Nama Guru</th>
-                    <th className="px-6 py-3 text-left text-base font-bold text-gray-500 uppercase tracking-wider">Nama Mata Pelajaran</th>
-                    <th className="px-6 py-3 text-left text-base font-bold text-gray-500 uppercase tracking-wider">Jam Mulai</th>
-                    <th className="px-6 py-3 text-left text-base font-bold text-gray-500 uppercase tracking-wider">Jam Selesai</th>
-                    <th className="px-6 py-3 text-left text-base font-bold text-gray-500 uppercase tracking-wider">Semester</th>
-                    <th className="px-6 py-3 text-left text-base font-bold text-gray-500 uppercase tracking-wider">Jumlah Jam</th>
-                    <th className="px-6 py-3 text-left text-base font-bold text-gray-500 uppercase tracking-wider">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredJadwal.map((item, index) => (
-                    <tr key={item.id} className="hover:bg-gray-50 transition duration-100">
-                      <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-900">{index + 1}</td>
-                      <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-800">{item.hari?.nama ?? "—"}</td>
-                      <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-800">{item.kelas?.nama ?? "—"}</td>
-                      <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-800">{item.guru?.nama ?? "—"}</td>
-                      <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-800">{item.mapel?.nama ?? "—"}</td>
-                      <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-800">{formatTime(item.jam?.mulai)}</td>
-                      <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-800">{formatTime(item.jam?.selesai)}</td>
-                      <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-800">{item.semester?.nama ?? "—"}</td>
-                      <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-700 font-bold">{item.jumlah_jam?.nama ?? item.jp ?? "—"}</td>
-                      <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-700 font-bold">
-                        <div className="flex items-center gap-2">
-                          <button className="flex items-center justify-center bg-yellow-400 hover:bg-yellow-500 px-3 py-1 rounded">
-                            <PenBox className="w-4 h-4" />
-                          </button>
-                          <button className="flex items-center justify-center bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                  {filteredJadwal.length === 0 && jadwals.length > 0 && (
+            <>
+              {/* Pagination dan Page Size Controls */}
+              <div className="flex justify-between items-center mb-4 text-sm text-gray-700">
+                <div className="flex items-center gap-2">
+                  <span>Tampilkan:</span>
+                  <select value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))} className="p-2 border border-gray-300 rounded-lg focus:ring-sky-500 focus:border-sky-500">
+                    {PAGE_SIZE_OPTIONS.map((size) => (
+                      <option key={size} value={size}>
+                        {size}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Tabel Data */}
+              <div className="overflow-x-auto min-h-full">
+                <table className="min-w-max w-full divide-y divide-gray-200 table-auto">
+                  <thead className="bg-gray-50">
                     <tr>
-                      <td colSpan={10} className="px-6 py-4 text-center text-sm text-gray-500">
-                        Tidak ada data jadwal ditemukan yang cocok dengan pencarian Anda.
-                      </td>
+                      <th className="px-6 py-3 text-left text-base font-bold text-gray-500 uppercase tracking-wider">No</th>
+                      <th className="px-6 py-3 text-left text-base font-bold text-gray-500 uppercase tracking-wider">Nama Hari</th>
+                      <th className="px-6 py-3 text-left text-base font-bold text-gray-500 uppercase tracking-wider">Nama Kelas</th>
+                      <th className="px-6 py-3 text-left text-base font-bold text-gray-500 uppercase tracking-wider">Nama Guru</th>
+                      <th className="px-6 py-3 text-left text-base font-bold text-gray-500 uppercase tracking-wider">Nama Mata Pelajaran</th>
+                      <th className="px-6 py-3 text-left text-base font-bold text-gray-500 uppercase tracking-wider">Jam Mulai</th>
+                      <th className="px-6 py-3 text-left text-base font-bold text-gray-500 uppercase tracking-wider">Jam Selesai</th>
+                      <th className="px-6 py-3 text-left text-base font-bold text-gray-500 uppercase tracking-wider">Semester</th>
+                      <th className="px-6 py-3 text-left text-base font-bold text-gray-500 uppercase tracking-wider">Jumlah Jam</th>
+                      <th className="px-6 py-3 text-left text-base font-bold text-gray-500 uppercase tracking-wider">Aksi</th>
                     </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {currentJadwals.map((item, index) => (
+                      <tr key={item.id} className="hover:bg-gray-50 transition duration-100">
+                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-900">{startIndex + index + 1}</td>
+                        <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-800">{item.hari?.nama ?? "—"}</td>
+                        <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-800">{item.kelas?.nama ?? "—"}</td>
+                        <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-800">{item.guru?.nama ?? "—"}</td>
+                        <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-800">{item.mapel?.nama ?? "—"}</td>
+                        <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-800">{formatTime(item.jam?.mulai)}</td>
+                        <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-800">{formatTime(item.jam?.selesai)}</td>
+                        <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-800">{item.semester?.nama ?? "—"}</td>
+                        <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-700 font-bold">{item.jumlah_jam?.nama ?? item.jp ?? "—"}</td>
+                        <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-700 font-bold">
+                          <div className="flex items-center gap-2">
+                            <button className="flex items-center justify-center bg-yellow-400 hover:bg-yellow-500 px-3 py-1 rounded">
+                              <PenBox className="w-4 h-4" />
+                            </button>
+                            <button className="flex items-center justify-center bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {currentJadwals.length === 0 && filteredJadwal.length > 0 && (
+                      <tr>
+                        <td colSpan={10} className="px-6 py-4 text-center text-sm text-gray-500">
+                          Tidak ada data jadwal ditemukan di halaman ini.
+                        </td>
+                      </tr>
+                    )}
+                    {filteredJadwal.length === 0 && jadwals.length > 0 && (
+                      <tr>
+                        <td colSpan={10} className="px-6 py-4 text-center text-sm text-gray-500">
+                          Tidak ada data jadwal ditemukan yang cocok dengan pencarian Anda.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Navigasi Pagination yang sudah diubah */}
+              {totalPages > 1 && (
+                <div className="flex justify-between items-center mt-4">
+                  <span className="text-sm text-gray-700">
+                    {Math.min(endIndex, totalItems)} dari {totalItems} data
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                      disabled={currentPage === 1}
+                      className="p-2 border border-gray-300 rounded-full text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                      aria-label="Halaman Sebelumnya"
+                    >
+                      <ChevronLeft className="w-5 h-5" />
+                    </button>
+                    {/* Tampilan "1/3, dst" */}
+                    <span className="px-3 py-1 text-gray-600 rounded-md font-semibold">
+                      {currentPage} / {totalPages}
+                    </span>
+                    <button
+                      onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                      disabled={currentPage === totalPages}
+                      className="p-2 border border-gray-300 rounded-full text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                      aria-label="Halaman Selanjutnya"
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </section>
       </div>

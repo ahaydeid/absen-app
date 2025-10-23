@@ -102,11 +102,18 @@ export async function middleware(req: NextRequest) {
   }
 
   // 2) admin (role_id === 1): allowed only to /admin and its descendants
+  // BAGIAN BARU: Modifikasi Role Routing untuk Admin (roleId === 1)
+  // 2) admin (role_id === 1):
+  //    - Jika Admin mengakses root ('/'), alihkan ke '/admin'.
+  //    - Jika Admin mengakses rute non-admin lainnya (e.g. /settings), biarkan saja (karena tidak ada logic redirect keluar dari admin).
+
   if (roleId === 1) {
-    if (!isAdminPath) {
+    // Jika path-nya adalah root ('/'), alihkan ke /admin
+    if (pathname === "/") {
       const target = new URL("/admin", req.url);
       return NextResponse.redirect(target);
     }
+    // Untuk path admin (/admin, /admin/xyz) atau path non-admin lainnya, biarkan request berlanjut
     return res;
   }
 

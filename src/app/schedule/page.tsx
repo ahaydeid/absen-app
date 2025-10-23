@@ -165,8 +165,8 @@ export default function Page(): React.ReactElement {
         )}
 
         {days.length > 0 && jadwalMap.size === 0 && (
-            <div className="text-center text-gray-500 mt-8 p-4 bg-white rounded-lg shadow">
-              Tidak ditemukan jadwal mengajar untuk user ini.
+            <div className="text-center text-white mt-8 p-4 bg-red-600">
+              Anda tidak memiliki jadwal mengajar.
             </div>
         )}
 
