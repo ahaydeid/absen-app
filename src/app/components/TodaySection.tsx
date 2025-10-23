@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { ArrowUpRight, Check } from "lucide-react";
 import Link from "next/link";
+// Pastikan path ini benar berdasarkan setup Next.js Anda
 import { createPagesBrowserClient } from "@supabase/auth-helpers-nextjs";
 
 type Database = {
@@ -32,6 +33,7 @@ type Item = {
   title: string;
   subject: string;
   range: string | null;
+  mulaiTime: string | null; // Tambahkan properti untuk pengurutan
   jp: string;
   status: "Selesai" | "Berlangsung" | null;
   isChecked: boolean;
@@ -42,6 +44,8 @@ type Item = {
 const getTodayHariIdWIB = (): number | null => {
   const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
   const jsDay = now.getDay();
+  // Minggu (0) ke Sabtu (6). Jika Hari ID Anda dimulai dari Senin=1, pastikan logika ini benar.
+  // Asumsi: Senin=1, Minggu=7 atau Hari ID 1-7. Jika JS Day 1-6 (Sen-Sab) dan 0 (Min), maka ini mengembalikan 1-6.
   return jsDay === 0 ? null : jsDay;
 };
 const getTodayISOJakarta = (): string => {
@@ -65,7 +69,8 @@ export default function TodaySection() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const supabase = createPagesBrowserClient<Database>();
+  // Menggunakan useMemo agar objek supabase tidak berubah pada setiap render
+  const supabase = useMemo(() => createPagesBrowserClient<Database>(), []);
   const hariId = getTodayHariIdWIB();
   const todayISO = getTodayISOJakarta();
 
@@ -81,9 +86,9 @@ export default function TodaySection() {
         const selesaiMins = toMinutes(selesai);
         const mulaiMins = toMinutes(mulai);
 
+        // Menentukan status
         const status = nowMins >= selesaiMins ? "Selesai" : nowMins >= mulaiMins && nowMins < selesaiMins ? "Berlangsung" : null;
 
-        // Ambil record absen untuk hari ini
         const absenToday = (j.absen ?? []).find((a) => a.tanggal === todayISO);
         const isChecked = absenToday?.status_jadwal === true;
         const isOverdue = !isChecked && !!selesai && nowMins >= selesaiMins;
@@ -94,6 +99,7 @@ export default function TodaySection() {
           title: j.kelas?.nama ?? "—",
           subject: j.mapel?.nama ?? "-",
           range: mulai && selesai ? `${formatTime(mulai)} - ${formatTime(selesai)}` : null,
+          mulaiTime: mulai, // Simpan waktu mulai untuk sorting
           jp: computeJP(mulai, selesai),
           status,
           isChecked,
@@ -102,7 +108,17 @@ export default function TodaySection() {
         };
       });
 
-      setItems(mapped.slice(0, 6));
+      // --- PERBAIKAN SORTING DI SINI ---
+      // Urutkan berdasarkan waktu mulai (mulaiTime) dari yang paling awal
+      const sortedItems = mapped.sort((a, b) => {
+        const timeA = toMinutes(a.mulaiTime);
+        const timeB = toMinutes(b.mulaiTime);
+        return timeA - timeB; // Ascending (paling awal di atas)
+      });
+      // --- AKHIR PERBAIKAN SORTING ---
+
+      // Batasi output ke 6 item setelah disort
+      setItems(sortedItems.slice(0, 6));
     },
     [todayISO]
   );
@@ -127,7 +143,7 @@ export default function TodaySection() {
           return;
         }
 
-        // gunakan LEFT JOIN agar semua jadwal muncul
+        // Gunakan LEFT JOIN agar semua jadwal muncul. Hapus order SQL karena sorting dilakukan di klien berdasarkan waktu mulai
         const { data, error: jadwalErr } = await supabase
           .from("jadwal")
           .select(
@@ -135,13 +151,13 @@ export default function TodaySection() {
               id,
               kelas:kelas_id(nama),
               mapel:mapel_id(nama),
-              jam:jam_id(nama,mulai,selesai),
+              jam:jam_id(nama,mulai,selesai), 
               absen:absen!left(tanggal,status_jadwal)
             `
           )
           .eq("hari_id", hariId)
-          .eq("guru_id", guruId)
-          .order("jam_id", { ascending: true });
+          .eq("guru_id", guruId);
+        // .order("jam_id", { ascending: true }); // Dihapus, sorting dilakukan di mapToItems
 
         if (jadwalErr) throw jadwalErr;
         mapToItems((data ?? []) as RawJadwal[]);
