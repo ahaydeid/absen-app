@@ -25,8 +25,21 @@ interface JadwalRelasi {
   semester: { nama: string } | null;
 }
 
+// Tipe Union untuk menampung semua kemungkinan nilai yang akan dicari.
+type SearchableValue = string | number | null | undefined | { nama: string | null | undefined };
+
 // Opsi jumlah data yang ingin ditampilkan
-const PAGE_SIZE_OPTIONS = [10, 50, 100];
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
+
+// Definisikan urutan hari yang benar (Senin-Sabtu) untuk sorting di client
+const HARI_ORDER: { [key: string]: number } = {
+  senin: 1,
+  selasa: 2,
+  rabu: 3,
+  kamis: 4,
+  jumat: 5,
+  sabtu: 6,
+};
 
 export default function MasterJadwalPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -38,7 +51,8 @@ export default function MasterJadwalPage() {
 
   // State untuk Pagination
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(PAGE_SIZE_OPTIONS[0]); // Default 10
+  // DEFAULT pageSize DIUBAH KE 20
+  const [pageSize, setPageSize] = useState(20);
 
   const fetchJadwal = async () => {
     setLoading(true);
@@ -56,7 +70,7 @@ export default function MasterJadwalPage() {
       `;
 
       // NOTE: Data diambil semua dari awal, pagination dilakukan di sisi klien
-      const { data, error: fetchError } = await supabase.from("jadwal").select(selectQuery).order("hari_id", { ascending: true }).order("jam_id", { ascending: true });
+      const { data, error: fetchError } = await supabase.from("jadwal").select(selectQuery);
 
       if (fetchError) throw fetchError;
 
@@ -89,23 +103,84 @@ export default function MasterJadwalPage() {
     setCurrentPage(1);
   }, [searchTerm, pageSize]);
 
-  const filteredJadwal = useMemo(() => {
-    return jadwals.filter((item) => {
-      const term = searchTerm.toLowerCase();
-      const kelas = item.kelas?.nama?.toLowerCase() ?? "";
-      const guru = item.guru?.nama?.toLowerCase() ?? "";
-      const mapel = item.mapel?.nama?.toLowerCase() ?? "";
-      return kelas.includes(term) || guru.includes(term) || mapel.includes(term);
+  // Modifikasi Logika Filter dan Sort
+  const sortedAndFilteredJadwal = useMemo(() => {
+    const term = searchTerm.toLowerCase().trim();
+
+    // 1. Filtering
+    const filtered = jadwals.filter((item) => {
+      if (!term) return true;
+
+      // Fungsi helper untuk mendapatkan nilai string dari kolom, menangani null/undefined/number
+      const getSearchableValue = (value: SearchableValue): string => {
+        if (value === null || value === undefined) return "";
+
+        // Memeriksa apakah nilai adalah objek dan memiliki properti 'nama'
+        if (typeof value === "object" && value !== null && "nama" in value) {
+          const nama = (value as { nama: string | null | undefined }).nama;
+          if (nama !== null && nama !== undefined) {
+            return String(nama).toLowerCase();
+          }
+        }
+
+        // Menangani string atau number (seperti item.jp)
+        return String(value).toLowerCase();
+      };
+
+      // Dapatkan nilai pencarian untuk semua kolom
+      const searchableFields = [
+        getSearchableValue(item.hari?.nama),
+        getSearchableValue(item.kelas?.nama),
+        getSearchableValue(item.guru?.nama),
+        getSearchableValue(item.mapel?.nama),
+        getSearchableValue(item.jam?.mulai),
+        getSearchableValue(item.jam?.selesai),
+        getSearchableValue(item.semester?.nama),
+        // Penanganan khusus untuk Jumlah Jam: cek 'nama' lalu fallback ke 'jp' (number)
+        getSearchableValue(item.jumlah_jam?.nama ?? item.jp),
+      ];
+
+      return searchableFields.some((field) => field.includes(term));
     });
-  }, [jadwals, searchTerm]);
+
+    // 2. Sorting
+    const sorted = [...filtered];
+
+    sorted.sort((a, b) => {
+      // 1. Sort Primary: Hari (Senin-Sabtu)
+      const aHariOrder = HARI_ORDER[a.hari?.nama?.toLowerCase() ?? ""] ?? Infinity;
+      const bHariOrder = HARI_ORDER[b.hari?.nama?.toLowerCase() ?? ""] ?? Infinity;
+
+      if (aHariOrder !== bHariOrder) {
+        return aHariOrder - bHariOrder;
+      }
+
+      // 2. Sort Secondary: Jam Mulai (Menggunakan string waktu untuk perbandingan)
+      // Gunakan '00:00:00' sebagai fallback untuk memastikan perbandingan yang benar
+      const aMulai = a.jam?.mulai ?? "00:00:00";
+      const bMulai = b.jam?.mulai ?? "00:00:00";
+
+      const timeComparison = aMulai.localeCompare(bMulai);
+      if (timeComparison !== 0) {
+        return timeComparison;
+      }
+
+      // 3. Sort Tertiary: Nama Kelas (A-Z)
+      const aKelas = a.kelas?.nama ?? "";
+      const bKelas = b.kelas?.nama ?? "";
+      return aKelas.localeCompare(bKelas);
+    });
+
+    return sorted;
+  }, [jadwals, searchTerm]); // Dependensi: jadwals dan searchTerm
 
   // Logika Pagination di sisi klien
-  const totalItems = filteredJadwal.length;
+  const totalItems = sortedAndFilteredJadwal.length;
   const totalPages = Math.ceil(totalItems / pageSize);
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = startIndex + pageSize;
 
-  const currentJadwals = filteredJadwal.slice(startIndex, endIndex);
+  const currentJadwals = sortedAndFilteredJadwal.slice(startIndex, endIndex);
 
   const formatTime = (timeString: string | undefined | null): string => {
     if (!timeString) return "—";
@@ -122,7 +197,8 @@ export default function MasterJadwalPage() {
             <div className="relative w-full sm:w-1/3">
               <input
                 type="text"
-                placeholder="Cari Mata Pelajaran..."
+                // Mengubah placeholder untuk mencerminkan pencarian menyeluruh
+                placeholder="Cari di semua kolom..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full p-3 pl-10 border border-gray-300 rounded-lg focus:ring-sky-500 focus:border-sky-500 transition duration-150"
@@ -172,11 +248,11 @@ export default function MasterJadwalPage() {
                     <tr>
                       <th className="px-6 py-3 text-left text-base font-bold text-gray-500 uppercase tracking-wider">No</th>
                       <th className="px-6 py-3 text-left text-base font-bold text-gray-500 uppercase tracking-wider">Nama Hari</th>
+                      <th className="px-6 py-3 text-left text-base font-bold text-gray-500 uppercase tracking-wider">Jam Mulai</th>
+                      <th className="px-6 py-3 text-left text-base font-bold text-gray-500 uppercase tracking-wider">Jam Selesai</th>
                       <th className="px-6 py-3 text-left text-base font-bold text-gray-500 uppercase tracking-wider">Nama Kelas</th>
                       <th className="px-6 py-3 text-left text-base font-bold text-gray-500 uppercase tracking-wider">Nama Guru</th>
                       <th className="px-6 py-3 text-left text-base font-bold text-gray-500 uppercase tracking-wider">Nama Mata Pelajaran</th>
-                      <th className="px-6 py-3 text-left text-base font-bold text-gray-500 uppercase tracking-wider">Jam Mulai</th>
-                      <th className="px-6 py-3 text-left text-base font-bold text-gray-500 uppercase tracking-wider">Jam Selesai</th>
                       <th className="px-6 py-3 text-left text-base font-bold text-gray-500 uppercase tracking-wider">Semester</th>
                       <th className="px-6 py-3 text-left text-base font-bold text-gray-500 uppercase tracking-wider">Jumlah Jam</th>
                       <th className="px-6 py-3 text-left text-base font-bold text-gray-500 uppercase tracking-wider">Aksi</th>
@@ -187,11 +263,11 @@ export default function MasterJadwalPage() {
                       <tr key={item.id} className="hover:bg-gray-50 transition duration-100">
                         <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-900">{startIndex + index + 1}</td>
                         <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-800">{item.hari?.nama ?? "—"}</td>
+                        <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-800">{formatTime(item.jam?.mulai)}</td>
+                        <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-800">{formatTime(item.jam?.selesai)}</td>
                         <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-800">{item.kelas?.nama ?? "—"}</td>
                         <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-800">{item.guru?.nama ?? "—"}</td>
                         <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-800">{item.mapel?.nama ?? "—"}</td>
-                        <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-800">{formatTime(item.jam?.mulai)}</td>
-                        <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-800">{formatTime(item.jam?.selesai)}</td>
                         <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-800">{item.semester?.nama ?? "—"}</td>
                         <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-700 font-bold">{item.jumlah_jam?.nama ?? item.jp ?? "—"}</td>
                         <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-700 font-bold">
@@ -206,14 +282,14 @@ export default function MasterJadwalPage() {
                         </td>
                       </tr>
                     ))}
-                    {currentJadwals.length === 0 && filteredJadwal.length > 0 && (
+                    {currentJadwals.length === 0 && sortedAndFilteredJadwal.length > 0 && (
                       <tr>
                         <td colSpan={10} className="px-6 py-4 text-center text-sm text-gray-500">
                           Tidak ada data jadwal ditemukan di halaman ini.
                         </td>
                       </tr>
                     )}
-                    {filteredJadwal.length === 0 && jadwals.length > 0 && (
+                    {sortedAndFilteredJadwal.length === 0 && jadwals.length > 0 && (
                       <tr>
                         <td colSpan={10} className="px-6 py-4 text-center text-sm text-gray-500">
                           Tidak ada data jadwal ditemukan yang cocok dengan pencarian Anda.

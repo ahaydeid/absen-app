@@ -220,7 +220,7 @@ export default function TodayPage() {
                 )}
 
                 <Link href="/poin" className="block">
-                  <span className="block bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-lg rounded-xl py-3 text-center shadow">Tambah Nilai Harian</span>
+                  <span className="block bg-yellow-500 hover:bg-yellow-400 text-white font-extrabold text-lg rounded-xl py-3 text-center shadow">Tambah Nilai Harian</span>
                 </Link>
               </div>
             </>
