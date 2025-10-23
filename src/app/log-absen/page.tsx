@@ -5,7 +5,6 @@ import { createPagesBrowserClient } from "@supabase/auth-helpers-nextjs";
 
 // --- Tipe Data ---
 
-// Disederhanakan untuk kemudahan referensi
 type AbsenRow = {
   id: number;
   tanggal: string; // 'YYYY-MM-DD'
@@ -37,6 +36,9 @@ type CardData = {
   jamSelesai: string;
 };
 
+// --- Konstanta Pagination ---
+const ITEMS_PER_PAGE = 10;
+
 // --- Komponen Utama ---
 
 const Page: React.FC = () => {
@@ -44,24 +46,25 @@ const Page: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // State baru untuk menangani filter tanggal
+  // State untuk Pagination
+  const [page, setPage] = useState(0); // 0-indexed page
+  const [totalCount, setTotalCount] = useState(0); // Total data yang cocok dengan filter
+
+  // State untuk Filter Tanggal
   const [dateFrom, setDateFrom] = useState<string | null>(null);
   const [dateTo, setDateTo] = useState<string | null>(null);
-  // State untuk trigger ulang load data saat filter diterapkan
   const [filterTrigger, setFilterTrigger] = useState(0);
 
   const supabase = createPagesBrowserClient();
 
-  // Helper: format 'YYYY-MM-DD' -> 'D MMMM YYYY' (memoized function)
+  // Helper: format 'YYYY-MM-DD' -> 'D MMMM YYYY'
   const formatDate = useCallback((dateStr: string | undefined | null): string => {
     if (!dateStr) return "—";
     try {
       const [yyyy, mm, dd] = dateStr.split("-").map(Number);
       if (Number.isNaN(yyyy) || Number.isNaN(mm) || Number.isNaN(dd)) return dateStr;
 
-      // Catatan: Month di Date constructor adalah 0-indexed
       const d = new Date(yyyy, mm - 1, dd);
-      // Gunakan Intl.DateTimeFormat untuk format lokal yang benar
       return new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(d);
     } catch {
       return dateStr;
@@ -69,16 +72,34 @@ const Page: React.FC = () => {
   }, []);
 
   const handleApplyFilter = () => {
-    // Trigger useEffect untuk memuat data baru
+    // Reset ke halaman pertama saat filter baru diterapkan
+    setPage(0); 
     setFilterTrigger((prev) => prev + 1);
+  };
+  
+  const handleNextPage = () => {
+    if ((page + 1) * ITEMS_PER_PAGE < totalCount) {
+      setPage(page + 1);
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (page > 0) {
+      setPage(page - 1);
+    }
   };
 
   useEffect(() => {
+    // FIX 1: Gunakan flag lokal dan fungsi cleanup untuk mounted status
     let mounted = true;
 
     const loadAbsen = async () => {
       setLoading(true);
       setError(null);
+
+      // Hitung range data untuk Query Supabase
+      const from = page * ITEMS_PER_PAGE;
+      const to = from + ITEMS_PER_PAGE - 1; 
 
       try {
         // 1. Ambil Session & Guru ID
@@ -98,22 +119,30 @@ const Page: React.FC = () => {
           return;
         }
 
-        // 2. Query Absen (FILTER PENGGANTI)
-        let absenQuery = supabase.from("absen").select("id, tanggal, jadwal_id").order("tanggal", { ascending: false }); // Urutkan berdasarkan tanggal terbaru
+        // 2. Query Absen dengan Pagination dan Count Total
+        let absenQuery = supabase
+          .from("absen")
+          .select("id, tanggal, jadwal_id", { count: 'exact' }) // Tambahkan count: 'exact'
+          .order("tanggal", { ascending: false });
 
-        // Terapkan Filter "Dari" dan "Sampai" jika ada
+        // Terapkan Filter Tanggal
         if (dateFrom) {
           absenQuery = absenQuery.gte("tanggal", dateFrom);
         }
         if (dateTo) {
           absenQuery = absenQuery.lte("tanggal", dateTo);
         }
+        
+        // Terapkan Pagination
+        absenQuery = absenQuery.range(from, to);
 
-        // JIKA TIDAK ADA FILTER, Query AKAN MENGAMBIL SEMUA DATA (sampai batas default Supabase)
-        // Kita tidak lagi memfilter berdasarkan tanggal hari ini
-
-        const { data: absenData, error: absenErr } = await absenQuery;
+        const { data: absenData, error: absenErr, count: total } = await absenQuery;
+        
         if (absenErr) throw absenErr;
+        
+        if (mounted) {
+            setTotalCount(total ?? 0);
+        }
 
         if (!absenData || absenData.length === 0) {
           setCards([]);
@@ -126,7 +155,7 @@ const Page: React.FC = () => {
         // 3. Ambil Jadwal yang Relevan (milik Guru ini)
         const { data: jadwalData, error: jadwalErr } = await supabase
           .from("jadwal")
-          .select("id, kelas_id, jam_id") // guru_id tidak perlu dipilih lagi karena sudah dipakai filter
+          .select("id, kelas_id, jam_id")
           .in("id", jadwalIds)
           .eq("guru_id", guruId);
 
@@ -162,7 +191,7 @@ const Page: React.FC = () => {
 
         // 6. Bangun Cards
         const builtCards: CardData[] = relevantAbsen.map((a) => {
-          const jadwal = jadwalById.get(a.jadwal_id)!; // Dijamin ada karena sudah difilter
+          const jadwal = jadwalById.get(a.jadwal_id)!;
           const kelasNama = kelasById.get(jadwal.kelas_id) ?? "—";
           const jamObj = jamById.get(jadwal.jam_id);
 
@@ -191,11 +220,22 @@ const Page: React.FC = () => {
 
     void loadAbsen();
 
+    // Fungsi cleanup untuk mengatasi warning/error 'mounted'
     return () => {
       mounted = false;
     };
-    // Tambahkan dateFrom, dateTo, dan filterTrigger sebagai dependency
-  }, [supabase, dateFrom, dateTo, filterTrigger]);
+    
+  }, [supabase, dateFrom, dateTo, filterTrigger, page]);
+
+  // FIX 2 & 3: Akses perhitungan pagination di JSX dengan mendefinisikannya di luar useEffect
+  const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+  const isFirstPage = page === 0;
+  const isLastPage = page >= totalPages - 1;
+  const currentPageDisplay = totalCount > 0 ? page + 1 : 0;
+  
+  // Hitung `from` dan `to` untuk display (menggantikan error Cannot find name 'from'/'to')
+  const displayFrom = totalCount > 0 ? (page * ITEMS_PER_PAGE) + 1 : 0;
+  const displayTo = Math.min(displayFrom + ITEMS_PER_PAGE - 1, totalCount);
 
   return (
     <main className="min-h-screen bg-gray-50 p-6">
@@ -204,54 +244,42 @@ const Page: React.FC = () => {
           <h1 className="text-2xl text-center font-semibold text-gray-800">Log Absen Siswa</h1>
         </header>
 
-        {/* --- Filter Section --- */}
+        {/* --- Filter Section (HANYA Tanggal) --- */}
         <section className="bg-white rounded sticky shadow-sm p-4 mb-6">
           <div className="flex flex-col gap-4 sticky md:flex-row md:items-end md:gap-6">
-            <div className="flex-1">
-              <label htmlFor="search" className="block text-xs font-medium text-gray-600 mb-1">
-                Cari kelas
-              </label>
-              <div className="relative">
-                <svg className="absolute left-3 top-3 h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" aria-hidden>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17.65 17.65A7.5 7.5 0 1110.5 3a7.5 7.5 0 017.15 14.65z" />
-                </svg>
-                <input
-                  id="search"
-                  type="text"
-                  placeholder="Cari by nama kelas, guru, atau jam"
-                  className="w-full rounded-md border border-gray-200 bg-white py-4 pl-10 pr-3 text-sm shadow-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-sky-500"
-                />
-              </div>
-            </div>
-            <div className="flex gap-3 flex-1">
+            <div className="flex gap-3 flex-grow">
               <div className="flex flex-col w-1/2">
                 <label htmlFor="dateFrom" className="block text-xs font-medium text-gray-600 mb-1">
-                  Dari
+                  Dari Tanggal
                 </label>
                 <input
                   id="dateFrom"
                   type="date"
                   value={dateFrom || ""}
                   onChange={(e) => setDateFrom(e.target.value)}
-                  className="w-full rounded-md border border-gray-200 bg-white py-4 px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-sky-500"
+                  className="w-full rounded-md border border-gray-200 bg-white py-2 px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-sky-500"
                 />
               </div>
               <div className="flex flex-col w-1/2">
                 <label htmlFor="dateTo" className="block text-xs font-medium text-gray-600 mb-1">
-                  Sampai
+                  Sampai Tanggal
                 </label>
                 <input
                   id="dateTo"
                   type="date"
                   value={dateTo || ""}
                   onChange={(e) => setDateTo(e.target.value)}
-                  className="w-full rounded-md border border-gray-200 bg-white py-4 px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-sky-500"
+                  className="w-full rounded-md border border-gray-200 bg-white py-2 px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-sky-500"
                 />
               </div>
             </div>
             <div className="w-full md:w-auto">
-              <button type="button" onClick={handleApplyFilter} className="w-full md:w-auto text-center font-bold items-center gap-2 rounded-md bg-sky-600 px-3 py-5 text-lg text-white shadow-sm hover:bg-sky-700 transition duration-150">
-                Terapkan
+              <button 
+                type="button" 
+                onClick={handleApplyFilter} 
+                className="w-full md:w-auto text-center font-bold items-center gap-2 rounded-md bg-sky-600 px-3 py-2.5 text-sm text-white shadow-sm hover:bg-sky-700 transition duration-150 h-full"
+              >
+                Terapkan Filter
               </button>
             </div>
           </div>
@@ -259,35 +287,70 @@ const Page: React.FC = () => {
 
         {/* --- Daftar Kelas Absen --- */}
         <section>
-          <div className="flex items-center">
-            <h2 className="text-lg font-medium text-gray-800 mb-3">{dateFrom || dateTo ? "Hasil Filter Absen" : "Semua Log"}</h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-medium text-gray-800">
+                Log Harian ({totalCount} total data)
+            </h2>
+            <div className="text-sm text-gray-600">
+                Halaman {currentPageDisplay} dari {totalPages}
+            </div>
           </div>
 
           {loading ? (
-            <p className="text-sm text-gray-600">Memuat kelas...</p>
+            <p className="text-sm text-gray-600">Memuat log absensi...</p>
           ) : error ? (
             <p className="text-sm text-red-600">Error: {error}</p>
           ) : cards.length === 0 ? (
             <p className="text-sm text-gray-600">Tidak ada log absensi ditemukan {dateFrom || dateTo ? "untuk periode ini." : "."}</p>
           ) : (
-            <div className="grid gap-1 sm:grid-cols-1 md:grid-cols-2">
-              {cards.map((c) => (
-                <a key={c.absenId} href={`/log-absen/${c.absenId}`} className="block transform rounded-sm border border-gray-200 bg-white px-4 py-3 transition hover:scale-[1.01] hover:shadow">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="text-xl mt-2 font-extrabold text-gray-800">{c.kelasNama}</h3>
+            <>
+                <div className="grid gap-1 sm:grid-cols-1 md:grid-cols-2">
+                  {cards.map((c) => (
+                    <a key={c.absenId} href={`/log-absen/${c.absenId}`} className="block transform rounded-sm border border-gray-200 bg-white px-4 py-3 transition hover:scale-[1.01] hover:shadow">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <h3 className="text-xl mt-2 font-extrabold text-gray-800">{c.kelasNama}</h3>
+                        </div>
+                        <div className="text-right">
+                          <h6 className="text-sm text-gray-600 mb-1">{formatDate(c.tanggal)}</h6>
+                          <p className="text-xs text-gray-700 border border-gray-300 bg-yellow-300 font-semibold rounded-full px-2 py-0.5 inline-block">
+                            {c.jamMulai.substring(0, 5)} - {c.jamSelesai.substring(0, 5)}
+                          </p>
+                        </div>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+
+                {/* --- Pagination Controls --- */}
+                <div className="mt-6 flex justify-between items-center">
+                    <button
+                        onClick={handlePrevPage}
+                        disabled={isFirstPage || loading}
+                        className={`px-4 py-2 text-sm font-semibold rounded-md transition duration-150 ${
+                            isFirstPage || loading
+                                ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                                : "bg-sky-600 text-white hover:bg-sky-700"
+                        }`}
+                    >
+                        &larr;
+                    </button>
+                    <div className="text-sm text-gray-600">
+                        {displayFrom} - {displayTo} dari {totalCount}
                     </div>
-                    <div className="text-right">
-                      <h6 className="text-sm text-gray-600 mb-1">{formatDate(c.tanggal)}</h6>
-                      <p className="text-xs text-gray-700 border border-gray-300 bg-yellow-300 font-semibold rounded-full px-2 py-0.5 inline-block">
-                        {/* Menggunakan substring(0, 5) untuk mengambil HH:MM dari HH:MM:SS */}
-                        {c.jamMulai.substring(0, 5)} - {c.jamSelesai.substring(0, 5)}
-                      </p>
-                    </div>
-                  </div>
-                </a>
-              ))}
-            </div>
+                    <button
+                        onClick={handleNextPage}
+                        disabled={isLastPage || loading}
+                        className={`px-4 py-2 text-sm font-semibold rounded-md transition duration-150 ${
+                            isLastPage || loading
+                                ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                                : "bg-sky-600 text-white hover:bg-sky-700"
+                        }`}
+                    >
+                        &rarr;
+                    </button>
+                </div>
+            </>
           )}
         </section>
       </div>

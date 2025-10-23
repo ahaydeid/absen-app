@@ -33,6 +33,11 @@ type Database = {
   };
 };
 
+const normalizeRel = <T,>(v: T | T[] | null | undefined): T | null => {
+  if (!v) return null;
+  return Array.isArray(v) ? (v.length ? v[0] : null) : v;
+};
+
 export default function HeroSection() {
   const [name, setName] = useState<string | null>(null);
   const [subject, setSubject] = useState<string | null>(null);
@@ -50,6 +55,7 @@ export default function HeroSection() {
         } = await supabase.auth.getSession();
 
         if (!mounted) return;
+
         if (!session) {
           setName(null);
           setSubject(null);
@@ -57,59 +63,51 @@ export default function HeroSection() {
           return;
         }
 
-        // 1) Cari entry user_accounts berdasarkan auth_user_id
-        const { data: acct, error: acctErr } = await supabase.from("user_accounts").select("user_id, email").eq("auth_user_id", session.user.id).maybeSingle();
+        // -------------------------
+        // 1) Cari user_accounts. Cari berdasarkan auth_user_id ATAU email (fallback) —
+        //    sekaligus ambil relasi guru (user_accounts.user_id -> guru.id).
+        // -------------------------
+        const orCond = `auth_user_id.eq.${session.user.id},email.eq.${session.user.email ?? ""}`;
+        const { data: acctWithGuru, error: acctErr } = await supabase
+          .from("user_accounts")
+          // ambil user_id,email dan relasi guru via foreign key `user_id`
+          .select("user_id, email, guru:user_id(id, nama, mapel_id)")
+          .or(orCond)
+          .maybeSingle();
 
-        if (acctErr) console.error("Error fetching user_accounts:", acctErr);
+        if (acctErr) console.warn("Error fetching user_accounts (with guru):", acctErr);
 
-        // Helper fallback: jika tidak ada mapping by auth_user_id, cari berdasarkan email
-        const findByEmailIfNoMapping = async (email: string | null) => {
-          if (!email) return null;
-          const { data: byEmail, error: byEmailErr } = await supabase.from("user_accounts").select("user_id, email").eq("email", email).maybeSingle();
-          if (byEmailErr) console.error("Error fetching user_accounts by email:", byEmailErr);
-          return byEmail;
-        };
-
-        let userAccount = acct ?? null;
-        if (!userAccount) {
-          userAccount = await findByEmailIfNoMapping(session.user.email ?? null);
+        // jika tidak ada mapping sama sekali -> tampilkan email
+        if (!acctWithGuru) {
+          setName(session.user.email ?? "Pengguna");
+          setSubject("-");
+          return;
         }
 
-        const guruId = userAccount?.user_id ?? null;
+        const guruRel = normalizeRel(acctWithGuru["guru"] as unknown) as { id: number; nama?: string | null; mapel_id?: number | null } | null;
+        const guruId = acctWithGuru.user_id ?? guruRel?.id ?? null;
 
+        // jika tetap nggak ada guruId -> tampilkan email
         if (!guruId) {
-          // Tidak ada mapping ke guru -> tampilkan email saja
           setName(session.user.email ?? "Pengguna");
           setSubject("-");
           return;
         }
 
-        // 2) Ambil guru berdasarkan guruId (dapatkan nama dan mapel_id)
-        const { data: guruRow, error: guruErr } = await supabase.from("guru").select("id, nama, mapel_id").eq("id", guruId).maybeSingle();
+        // -------------------------
+        // 2) Nama guru (ambil dari relasi jika ada, atau fallback ke email)
+        // -------------------------
+        const guruName = guruRel?.nama ?? null;
+        setName(guruName ?? session.user.email ?? "Pengguna");
 
-        if (guruErr) {
-          console.error("Error fetching guru:", guruErr);
-          setName(session.user.email ?? "Pengguna");
-          setSubject("-");
-          return;
-        }
-
-        if (!guruRow) {
-          setName(session.user.email ?? "Pengguna");
-          setSubject("-");
-          return;
-        }
-
-        // Tampilkan nama guru (fallback ke email bila null)
-        const nm = guruRow.nama ?? session.user.email ?? "Pengguna";
-        setName(nm);
-
-        // 3) Jika guru punya mapel_id, ambil nama mapel dari tabel mapel
-        if (guruRow.mapel_id) {
-          const { data: mapelRow, error: mapelErr } = await supabase.from("mapel").select("nama").eq("id", guruRow.mapel_id).maybeSingle();
-
+        // -------------------------
+        // 3) Ambil mapel jika ada mapel_id
+        // -------------------------
+        const mapelId = guruRel?.mapel_id ?? null;
+        if (mapelId) {
+          const { data: mapelRow, error: mapelErr } = await supabase.from("mapel").select("nama").eq("id", mapelId).maybeSingle();
           if (mapelErr) {
-            console.error("Error fetching mapel:", mapelErr);
+            console.warn("Error fetching mapel:", mapelErr);
             setSubject("-");
           } else {
             setSubject(mapelRow?.nama ?? "-");
@@ -126,7 +124,7 @@ export default function HeroSection() {
       }
     };
 
-    fetchData();
+    void fetchData();
 
     return () => {
       mounted = false;
@@ -140,10 +138,6 @@ export default function HeroSection() {
           <DateDisplay />
         </p>
         <div className="mx-auto flex items-center justify-between px-3 md:px-6 py-2 md:py-3">
-          {/* <div className="flex items-center gap-3">
-            <div className="w-10 h-10 md:w-16 md:h-16 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center" />
-          </div> */}
-
           <div className="flex flex-col items-end flex-shrink-0 ml-auto">
             {loading ? (
               <>

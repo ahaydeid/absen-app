@@ -26,6 +26,9 @@ export default function AttendanceContent() {
   const [submitting, setSubmitting] = useState(false);
   const [jadwalId, setJadwalId] = useState<number | null>(null);
 
+  // State baru untuk menyimpan ID Kelas yang diambil dari Jadwal ID di URL
+  const [kelasIdFromJadwal, setKelasIdFromJadwal] = useState<number | null>(null);
+
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   const listRef = useRef<HTMLUListElement | null>(null);
@@ -38,26 +41,55 @@ export default function AttendanceContent() {
 
   const searchParams = useSearchParams();
 
-  const initialKelas = (() => {
+  const initialJadwalId = (() => {
+    // Nama variabel diubah secara internal untuk kejelasan
     const k = searchParams?.get("kelas");
     const n = k ? Number(k) : null;
     return k && !Number.isNaN(n) ? n : null;
   })();
-  const [selectedKelasId, setSelectedKelasId] = useState<number | null>(initialKelas);
-
+  // selectedKelasId kini menyimpan nilai ID JADWAL dari parameter 'kelas'
+  const [selectedJadwalId, setSelectedJadwalId] = useState<number | null>(initialJadwalId);
   const fetchCounterRef = useRef(0);
 
+  // Perbaikan: Ganti `selectedKelasId` menjadi `selectedJadwalId` di logic awal
   useEffect(() => {
     const k = searchParams?.get("kelas");
     const newId = k ? Number(k) : null;
 
     if (k && Number.isNaN(newId)) {
-      setSelectedKelasId(null);
+      setSelectedJadwalId(null);
       return;
     }
-    setSelectedKelasId((prev) => (prev === newId ? prev : newId));
+    setSelectedJadwalId((prev) => (prev === newId ? prev : newId));
   }, [searchParams]);
 
+  // Perbaikan: Logic untuk set Jadwal ID dan mengambil Kelas ID yang benar
+  useEffect(() => {
+    setJadwalId(null);
+    setKelasIdFromJadwal(null);
+    if (selectedJadwalId === null) return;
+
+    // 1. Set Jadwal ID menggunakan nilai dari URL
+    setJadwalId(selectedJadwalId);
+
+    // 2. Cari ID Kelas yang benar berdasarkan ID Jadwal
+    const loadKelasId = async () => {
+      try {
+        const { data, error } = await supabase.from("jadwal").select("kelas_id").eq("id", selectedJadwalId).maybeSingle();
+
+        if (error) throw error;
+        const kId = (data as { kelas_id: number } | null)?.kelas_id ?? null;
+        setKelasIdFromJadwal(kId);
+      } catch (err) {
+        console.error("Gagal memuat Kelas ID dari Jadwal:", err);
+        setKelasIdFromJadwal(null);
+      }
+    };
+
+    void loadKelasId();
+  }, [selectedJadwalId]); // FIX: Menambahkan selectedJadwalId sebagai dependency
+
+  // Perbaikan: Fetch Siswa kini menggunakan Kelas ID yang benar (kelasIdFromJadwal)
   useEffect(() => {
     fetchCounterRef.current += 1;
     const fetchId = fetchCounterRef.current;
@@ -67,11 +99,21 @@ export default function AttendanceContent() {
       setFetchError(null);
       setStudents([]);
 
+      // Tunggu hingga kelasIdFromJadwal didapatkan
+      if (kelasIdFromJadwal === null) {
+        if (selectedJadwalId !== null) {
+          // Menunggu ID Kelas dimuat, atau error jika ID Jadwal ada tapi ID Kelas gagal diambil
+        }
+        setLoading(false);
+        return;
+      }
+
       try {
         let query = supabase.from("siswa").select("id, nama, kelas_id").order("nama", { ascending: true });
 
-        if (selectedKelasId !== null) {
-          query = query.eq("kelas_id", selectedKelasId);
+        // Perbaikan: Gunakan kelasIdFromJadwal
+        if (kelasIdFromJadwal !== null) {
+          query = query.eq("kelas_id", kelasIdFromJadwal);
         }
 
         const res = await query;
@@ -103,17 +145,20 @@ export default function AttendanceContent() {
       }
     };
 
-    load();
-  }, [selectedKelasId]);
+    void load();
+  }, [kelasIdFromJadwal, selectedJadwalId]); // FIX: Menambahkan selectedJadwalId sebagai dependency
 
+  // Perbaikan: Fetch Nama Kelas kini menggunakan Kelas ID yang benar
   useEffect(() => {
     const loadKelasName = async () => {
       setKelasName(null);
-      if (selectedKelasId == null) return;
+      // Perbaikan: Gunakan kelasIdFromJadwal
+      if (kelasIdFromJadwal == null) return;
 
       setKelasNameLoading(true);
       try {
-        const resp = await supabase.from("kelas").select("nama").eq("id", selectedKelasId).limit(1).maybeSingle();
+        // Perbaikan: Gunakan kelasIdFromJadwal
+        const resp = await supabase.from("kelas").select("nama").eq("id", kelasIdFromJadwal).limit(1).maybeSingle();
         if (resp.error) {
           console.warn("Failed fetching kelas name:", resp.error);
           setKelasName(null);
@@ -131,35 +176,11 @@ export default function AttendanceContent() {
       }
     };
 
-    loadKelasName();
-  }, [selectedKelasId]);
+    void loadKelasName();
+  }, [kelasIdFromJadwal]); // Dependency diubah
 
-  useEffect(() => {
-    const loadJadwalId = async () => {
-      setJadwalId(null);
-      if (selectedKelasId == null) return;
-
-      const jsDay = new Date().getDay();
-      const hariCandidates = jsDay === 0 ? [0, 7] : [jsDay];
-
-      try {
-        const selectStr = "id, kelas_id, hari_id, jam_id";
-        const resp = await supabase.from("jadwal").select(selectStr).in("hari_id", hariCandidates).eq("kelas_id", selectedKelasId).order("jam_id", { ascending: true }).limit(1);
-
-        if (resp.error) {
-          console.warn("Failed fetching jadwal for kelas:", resp.error);
-          return;
-        }
-
-        const rows = (resp.data ?? []) as Array<{ id: number }>;
-        if (rows.length > 0) setJadwalId(rows[0].id);
-      } catch (err) {
-        console.error("Error loadJadwalId:", err);
-      }
-    };
-
-    loadJadwalId();
-  }, [selectedKelasId]);
+  // Kode lama yang salah telah dihapus karena Jadwal ID sudah didapatkan dari URL
+  // Hapus: useEffect(() => { ... loadJadwalId ... }, [selectedKelasId]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -221,6 +242,11 @@ export default function AttendanceContent() {
 
   const handleSubmit = async () => {
     if (!students.length) return;
+    if (jadwalId === null) {
+      // Tambahkan cek untuk memastikan Jadwal ID ada
+      alert("Gagal menyimpan absensi: Jadwal tidak teridentifikasi.");
+      return;
+    }
 
     setSubmitting(true);
 
@@ -241,7 +267,7 @@ export default function AttendanceContent() {
 
       const { error } = await supabase.from("absen").upsert(
         {
-          jadwal_id: jadwalId,
+          jadwal_id: jadwalId, // Menggunakan Jadwal ID yang benar dari URL
           tanggal,
           statuses: ensured,
           updated_at: new Date().toISOString(),
@@ -254,6 +280,9 @@ export default function AttendanceContent() {
         alert("Gagal menyimpan absensi: " + error.message);
       } else {
         alert("Absensi tersimpan.");
+        // Opsi: Redirect kembali ke TodayPage setelah berhasil
+        const returnTo = searchParams?.get("returnTo") || `/today?id=${selectedJadwalId ?? ""}`;
+        window.location.href = returnTo;
       }
     } catch (err: unknown) {
       console.error("Error submit:", err);
@@ -266,8 +295,6 @@ export default function AttendanceContent() {
   const displayClassTitle = (() => {
     if (kelasNameLoading) return "Memuat kelas...";
     if (kelasName) return kelasName;
-    if (selectedKelasId !== null) return `Kelas ${selectedKelasId}`;
-    return "MPLB-1";
   })();
 
   return (
@@ -343,9 +370,12 @@ export default function AttendanceContent() {
         </div>
 
         <button
-          disabled={!allDone || submitting}
+          // Tambahkan cek jadwalId
+          disabled={!allDone || submitting || jadwalId === null}
           onClick={() => setConfirmOpen(true)}
-          className={`w-full py-3 mt-4 rounded-full text-lg font-semibold flex items-center justify-center gap-2 transition ${allDone && !submitting ? "bg-green-600 text-white" : "bg-gray-300 text-gray-600 cursor-not-allowed"}`}
+          className={`w-full py-3 mt-4 rounded-full text-lg font-semibold flex items-center justify-center gap-2 transition ${
+            allDone && !submitting && jadwalId !== null ? "bg-green-600 text-white" : "bg-gray-300 text-gray-600 cursor-not-allowed"
+          }`}
         >
           <Check className="w-5 h-5" />
           {submitting ? "Menyimpan..." : "Selesai"}
