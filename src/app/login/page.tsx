@@ -65,7 +65,7 @@ export default function LoginPageClient() {
       await waitForSession(5000, 200);
 
       const params = new URLSearchParams(window.location.search);
-      const redirectTo = (params.get("redirect") ?? "/admin/account").toString();
+      const redirectTo = (params.get("redirect") ?? "/admin/dashboard").toString();
 
       // full navigation supaya halaman login ter-unload; spinner tetap terlihat
       window.location.replace(redirectTo);
