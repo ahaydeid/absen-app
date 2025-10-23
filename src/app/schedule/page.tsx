@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { createPagesBrowserClient } from "@supabase/auth-helpers-nextjs";
 import JadwalHariCard from "../components/JadwalHariCard";
 
@@ -12,10 +12,17 @@ type RawJadwal = {
   jam_id?: number | null;
   kelas_id?: number | null;
   jp?: number | null;
-  guru_id?: number | null; // tambahan: guru_id
+  guru_id?: number | null;
   kelas?: RelOneOrMany<{ nama?: string }>;
   jam?: RelOneOrMany<{ nama?: string; mulai?: string; selesai?: string }>;
   jumlah_jam?: RelOneOrMany<{ nama?: string }>;
+};
+
+// Fungsi utilitas untuk mengubah waktu string (HH:MM:SS) menjadi menit
+const toMinutes = (time: string | null): number => {
+  if (!time) return 9999; // Jika null, beri nilai besar agar diurutkan ke bawah
+  const [h = "0", m = "0"] = time.split(":");
+  return Number(h) * 60 + Number(m);
 };
 
 export default function Page(): React.ReactElement {
@@ -25,7 +32,7 @@ export default function Page(): React.ReactElement {
   const [error, setError] = useState<string | null>(null);
 
   // gunakan Pages Browser Client agar memakai session auth client-side
-  const supabase = createPagesBrowserClient();
+  const supabase = useMemo(() => createPagesBrowserClient(), []);
 
   useEffect(() => {
     let mounted = true;
@@ -35,7 +42,6 @@ export default function Page(): React.ReactElement {
       setError(null);
 
       try {
-        // ambil session & user
         const {
           data: { session },
         } = await supabase.auth.getSession();
@@ -65,7 +71,7 @@ export default function Page(): React.ReactElement {
 
         const guruId = userAccount?.user_id ?? null;
 
-        // Ambil daftar hari (sama seperti sebelumnya)
+        // Ambil daftar hari (Senin - Sabtu, ID 1-6)
         const daysResp = await supabase.from("hari").select("id, nama").gte("id", 1).lte("id", 6).order("id", { ascending: true });
 
         if (daysResp.error) throw daysResp.error;
@@ -75,24 +81,18 @@ export default function Page(): React.ReactElement {
         if (!mounted) return;
         setDays(daysData);
 
-        if (daysData.length === 0) {
+        if (daysData.length === 0 || !guruId) {
           setJadwals([]);
           setLoading(false);
           return;
         }
 
-        // jika tidak ada mapping guru untuk user -> jangan tampilkan jadwal apapun
-        if (!guruId) {
-          setJadwals([]);
-          setLoading(false);
-          return;
-        }
-
-        // 2) ambil semua jadwal untuk hari-hari yang ada, tapi hanya untuk guru_id yang sesuai
+        // 2) ambil semua jadwal untuk guru dan hari yang sesuai.
+        // Order by hari_id (wajib), tapi order jam_id dihapus karena kita akan sort by jam.mulai di klien.
         const hariIds = daysData.map((d) => d.id);
         const selectStr = "id, hari_id, jam_id, kelas_id, jp, guru_id, " + "kelas:kelas_id(nama), jam:jam_id(nama,mulai,selesai), jumlah_jam:jp(nama)";
 
-        const jadwalResp = await supabase.from("jadwal").select(selectStr).in("hari_id", hariIds).eq("guru_id", guruId).order("hari_id", { ascending: true }).order("jam_id", { ascending: true });
+        const jadwalResp = await supabase.from("jadwal").select(selectStr).in("hari_id", hariIds).eq("guru_id", guruId).order("hari_id", { ascending: true }); // order jam_id dihapus
 
         if (jadwalResp.error) throw jadwalResp.error;
 
@@ -118,18 +118,38 @@ export default function Page(): React.ReactElement {
 
   const jadwalMap = React.useMemo(() => {
     const m = new Map<number, RawJadwal[]>();
+
     jadwals.forEach((j) => {
       const hid = j.hari_id ?? -1;
       if (!m.has(hid)) m.set(hid, []);
       m.get(hid)!.push(j);
     });
+
+    // --- SORTING BERDASARKAN WAKTU MULAI (JAM.MULAI) ---
+    // Iterasi melalui setiap hari dan urutkan jadwal di dalamnya.
+    m.forEach((list, hariId) => {
+      // Pastikan list jam memiliki properti jam.mulai dan urutkan secara ascending (paling awal di atas)
+      list.sort((a, b) => {
+        // Ambil waktu mulai, pastikan itu adalah objek tunggal jika RelOneOrMany
+        const mulaiA = Array.isArray(a.jam) ? a.jam[0]?.mulai ?? null : a.jam?.mulai ?? null;
+        const mulaiB = Array.isArray(b.jam) ? b.jam[0]?.mulai ?? null : b.jam?.mulai ?? null;
+        
+        const timeA = toMinutes(mulaiA);
+        const timeB = toMinutes(mulaiB);
+
+        return timeA - timeB; // Ascending sort
+      });
+      m.set(hariId, list);
+    });
+    // --------------------------------------------------
+
     return m;
   }, [jadwals]);
 
   return (
     <div className="min-h-screen bg-[#f5f5f5] pt-4 pb-28">
       <div className="mx-auto w-full px-4 max-w-xl md:max-w-2xl lg:max-w-3xl">
-        <h1 className="text-center text-2xl md:text-[20px] font-extrabold mb-4">Jadwal</h1>
+        <h1 className="text-center text-2xl md:text-[20px] font-extrabold mb-4">Jadwal Mengajar</h1>
 
         {loading ? (
           <div className="text-center text-gray-500">Memuat jadwal...</div>
@@ -142,6 +162,12 @@ export default function Page(): React.ReactElement {
               return <JadwalHariCard key={day.id} day={day} list={list} />;
             })}
           </div>
+        )}
+
+        {days.length > 0 && jadwalMap.size === 0 && (
+            <div className="text-center text-gray-500 mt-8 p-4 bg-white rounded-lg shadow">
+              Tidak ditemukan jadwal mengajar untuk user ini.
+            </div>
         )}
 
         <div className="h-8" />

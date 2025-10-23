@@ -140,11 +140,11 @@ function DetailKelasContent() {
     <div className="min-h-screen bg-gray-50 p-6 pb-20">
       <div className="max-w-full mx-auto bg-white rounded-xl shadow p-6">
         <header className="mb-6">
-          <h1 className="text-lg font-bold text-sky-600">RIWAYAT KEHADIRAN KELAS</h1>
+          <h1 className="text-lg font-bold text-sky-600">DETAIL KEHADIRAN</h1>
           <h2 className="text-3xl font-extrabold text-gray-800 border-b pb-2">{kelasNama}</h2>
-          <p className="text-sm text-gray-500 mt-2">
-            Menampilkan {absenHistory.length} data absen terakhir. {siswaList.length} siswa.
-          </p>
+          {/* <p className="text-sm text-gray-500 mt-2">
+            Detail absensi terakhir. <span className="font-bold">{siswaList.length} siswa</span>.
+          </p> */}
         </header>
 
         {loading ? (

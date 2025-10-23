@@ -229,7 +229,7 @@ export default function ExportPage() {
 
         <div className="flex gap-4 mb-4">
           <div className="flex-1">
-            <label className="block mb-1 font-semibold text-gray-700">Tanggal Mulai:</label>
+            <label className="block mb-1 font-semibold text-gray-700">Dari:</label>
             <input
               type="date"
               className="w-full border border-gray-300 rounded-lg py-3 px-1 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 shadow-sm"
@@ -239,7 +239,7 @@ export default function ExportPage() {
             />
           </div>
           <div className="flex-1">
-            <label className="block mb-1 font-semibold text-gray-700">Tanggal Selesai:</label>
+            <label className="block mb-1 font-semibold text-gray-700">Sampai:</label>
             <input
               type="date"
               className="w-full border border-gray-300 rounded-lg py-3 px-1 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 shadow-sm"
